@@ -1,0 +1,41 @@
+{
+    "name": "frondly-api",
+    "version": "0.0.1",
+    "description": "frondly.co.za back-end and REST API",
+    "license": "MIT",
+    "author": "Veli Gebrev",
+    "type": "module",
+    "main": "dist/index.js",
+    "scripts": {
+        "dev": "tsx watch --env-file=.env src/index.ts",
+        "build": "tsc",
+        "start": "node dist/index.js",
+        "lint": "eslint src",
+        "lint:fix": "eslint src --fix",
+        "format": "prettier --write src",
+        "format:check": "prettier --check src",
+        "test": "vitest run",
+        "test:watch": "vitest"
+    },
+    "devDependencies": {
+        "@eslint/js": "^10.0.1",
+        "@tsconfig/node24": "^24.0.4",
+        "@types/node": "^24.12.0",
+        "@vitest/eslint-plugin": "^1.6.13",
+        "eslint": "^10.1.0",
+        "eslint-config-prettier": "^10.1.8",
+        "globals": "^17.4.0",
+        "jiti": "^2.6.1",
+        "prettier": "^3.8.1",
+        "tsx": "^4.21.0",
+        "typescript": "^5.9.3",
+        "typescript-eslint": "^8.57.2",
+        "vitest": "^4.1.2"
+    },
+    "dependencies": {
+        "@fastify/mongodb": "^10.0.0",
+        "fastify": "^5.8.4",
+        "fastify-plugin": "^5.1.0",
+        "mongodb": "^7.1.1"
+    }
+}
