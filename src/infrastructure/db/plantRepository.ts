@@ -1,5 +1,5 @@
 import { Db, ObjectId, WithId } from 'mongodb';
-import { Plant, PlantRepository } from '../../domain/plant/plant.js';
+import { Plant, PlantRepository } from '$domain/plant/plant.js';
 
 interface PlantDocument {
     _id: ObjectId;

@@ -1,4 +1,4 @@
-import { Plant, PlantRepository } from '../../domain/plant/plant.js';
+import { Plant, PlantRepository } from '$domain/plant/plant.js';
 
 export class PlantService {
     constructor(private readonly plants: PlantRepository) {}

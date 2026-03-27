@@ -1,8 +1,8 @@
 import { FastifyInstance } from 'fastify';
 import fastifyPlugin from 'fastify-plugin';
 import { Db } from 'mongodb';
-import { MongoPlantRepository } from '../../db/plantRepository.js';
-import { PlantService } from '../../../application/plant/plantService.js';
+import { MongoPlantRepository } from '$infrastructure/db/plantRepository.js';
+import { PlantService } from '$application/plant/plantService.js';
 
 declare module 'fastify' {
     interface FastifyInstance {
