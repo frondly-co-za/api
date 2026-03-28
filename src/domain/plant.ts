@@ -3,7 +3,7 @@ export interface Plant {
     name: string;
 }
 
-export interface PlantRepository {
+export interface PlantsRepository {
     findAll(): Promise<Plant[]>;
     findById(id: string): Promise<Plant | null>;
     create(name: string): Promise<Plant>;

@@ -1,7 +1,7 @@
-import { Plant, PlantRepository } from '$domain/plant/plant.js';
+import { Plant, PlantsRepository } from '$domain/plant.js';
 
-export class PlantService {
-    constructor(private readonly plants: PlantRepository) {}
+export class PlantsService {
+    constructor(private readonly plants: PlantsRepository) {}
 
     getAll(): Promise<Plant[]> {
         return this.plants.findAll();

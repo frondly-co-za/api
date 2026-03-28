@@ -1,16 +1,16 @@
 import { Db, ObjectId, WithId } from 'mongodb';
-import { Plant, PlantRepository } from '$domain/plant/plant.js';
+import { Plant, PlantsRepository } from '$domain/plant.js';
 
 interface PlantDocument {
     _id: ObjectId;
     name: string;
 }
 
-export class MongoPlantRepository implements PlantRepository {
+export class MongoPlantsRepository implements PlantsRepository {
     private readonly collection;
 
     constructor(db: Db) {
-        this.collection = db.collection<PlantDocument>('plant');
+        this.collection = db.collection<PlantDocument>('plants');
     }
 
     private toPlant(doc: WithId<PlantDocument>): Plant {
