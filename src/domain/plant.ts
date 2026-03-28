@@ -1,7 +1,11 @@
-export interface Plant {
-    id: string;
-    name: string;
-}
+import { Static, Type } from 'typebox';
+
+export const PlantSchema = Type.Object({
+    id: Type.String(),
+    name: Type.String()
+});
+
+export type Plant = Static<typeof PlantSchema>;
 
 export interface PlantsRepository {
     findAll(): Promise<Plant[]>;
