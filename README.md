@@ -28,7 +28,8 @@ The API will be available at `http://localhost:3000`.
 | `npm run dev` | Start development server with hot reload |
 | `npm run build` | Compile TypeScript to `dist/` |
 | `npm start` | Run compiled build |
-| `npm test` | Run tests |
+| `npm test` | Run tests once |
+| `npm run test:watch` | Run tests in watch mode |
 | `npm run lint` | Check for lint errors |
 | `npm run format` | Format source files |
 
