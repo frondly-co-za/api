@@ -26,6 +26,7 @@
         "eslint-config-prettier": "^10.1.8",
         "globals": "^17.4.0",
         "jiti": "^2.6.1",
+        "mongodb-memory-server": "^11.0.1",
         "prettier": "^3.8.1",
         "tsc-alias": "^1.8.16",
         "tsx": "^4.21.0",

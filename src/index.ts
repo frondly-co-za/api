@@ -1,4 +1,4 @@
-import server from './infrastructure/http/server.js';
+import server from '$infrastructure/http/server.js';
 
 try {
     await server.listen({ port: 3000, host: '0.0.0.0' });
