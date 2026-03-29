@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { PlantsService } from '$application/plants-service.js';
-import type { PlantsRepository } from '$domain/plant.js';
+import type { PlantsRepository, CreatePlantData } from '$domain/plant.js';
 import type { Plant } from '$domain/plant.js';
 
 const mockRepo: PlantsRepository = {
@@ -13,19 +13,31 @@ const service = new PlantsService(mockRepo);
 
 beforeEach(() => vi.clearAllMocks());
 
-describe('getAll', () => {
-    it('delegates to repo.findAll and returns the result', async () => {
-        const plants: Plant[] = [{ id: '507f1f77bcf86cd799439011', name: 'Cactus' }];
-        vi.mocked(mockRepo.findAll).mockResolvedValue(plants);
+const userId = '507f1f77bcf86cd799439012';
 
-        expect(await service.getAll()).toEqual(plants);
-        expect(mockRepo.findAll).toHaveBeenCalledOnce();
+const plant: Plant = {
+    id: '507f1f77bcf86cd799439011',
+    userId,
+    name: 'Cactus',
+    description: null,
+    photoUrl: null,
+    acquiredAt: null,
+    notes: null,
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+};
+
+describe('getAll', () => {
+    it('delegates to repo.findAll with userId and returns the result', async () => {
+        vi.mocked(mockRepo.findAll).mockResolvedValue([plant]);
+
+        expect(await service.getAll(userId)).toEqual([plant]);
+        expect(mockRepo.findAll).toHaveBeenCalledExactlyOnceWith(userId);
     });
 });
 
 describe('getById', () => {
     it('delegates to repo.findById with the given id and returns the plant', async () => {
-        const plant: Plant = { id: '507f1f77bcf86cd799439011', name: 'Cactus' };
         vi.mocked(mockRepo.findById).mockResolvedValue(plant);
 
         expect(await service.getById(plant.id)).toEqual(plant);
@@ -40,11 +52,18 @@ describe('getById', () => {
 });
 
 describe('create', () => {
-    it('delegates to repo.create with the given name and returns the new plant', async () => {
-        const plant: Plant = { id: '507f1f77bcf86cd799439011', name: 'Cactus' };
+    it('delegates to repo.create with the given data and returns the new plant', async () => {
+        const data: CreatePlantData = {
+            userId,
+            name: 'Cactus',
+            description: null,
+            photoUrl: null,
+            acquiredAt: null,
+            notes: null,
+        };
         vi.mocked(mockRepo.create).mockResolvedValue(plant);
 
-        expect(await service.create('Cactus')).toEqual(plant);
-        expect(mockRepo.create).toHaveBeenCalledExactlyOnceWith('Cactus');
+        expect(await service.create(data)).toEqual(plant);
+        expect(mockRepo.create).toHaveBeenCalledExactlyOnceWith(data);
     });
 });

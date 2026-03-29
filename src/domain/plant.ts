@@ -2,13 +2,29 @@ import { Static, Type } from 'typebox';
 
 export const PlantSchema = Type.Object({
     id: Type.String(),
-    name: Type.String()
+    userId: Type.String(),
+    name: Type.String(),
+    description: Type.Union([Type.String(), Type.Null()]),
+    photoUrl: Type.Union([Type.String(), Type.Null()]),
+    acquiredAt: Type.Union([Type.String({ format: 'date-time' }), Type.Null()]),
+    notes: Type.Union([Type.String(), Type.Null()]),
+    createdAt: Type.String({ format: 'date-time' }),
+    updatedAt: Type.String({ format: 'date-time' })
 });
 
 export type Plant = Static<typeof PlantSchema>;
 
+export interface CreatePlantData {
+    userId: string;
+    name: string;
+    description: string | null;
+    photoUrl: string | null;
+    acquiredAt: string | null;
+    notes: string | null;
+}
+
 export interface PlantsRepository {
-    findAll(): Promise<Plant[]>;
+    findAll(userId: string): Promise<Plant[]>;
     findById(id: string): Promise<Plant | null>;
-    create(name: string): Promise<Plant>;
+    create(data: CreatePlantData): Promise<Plant>;
 }

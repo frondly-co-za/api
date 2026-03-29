@@ -11,9 +11,9 @@ function buildApp() {
     const app = Fastify({ logger: false });
 
     const mockPlantsService = {
-        getAll: vi.fn<() => Promise<Plant[]>>(),
+        getAll: vi.fn<(userId: string) => Promise<Plant[]>>(),
         getById: vi.fn<(id: string) => Promise<Plant | null>>(),
-        create: vi.fn<(name: string) => Promise<Plant>>(),
+        create: vi.fn<(data: object) => Promise<Plant>>(),
     };
 
     // Decorate before registering routes so the plugin can access it
@@ -23,22 +23,40 @@ function buildApp() {
     return { app, mockPlantsService };
 }
 
+const userId = '507f1f77bcf86cd799439012';
+
+const plant: Plant = {
+    id: '507f1f77bcf86cd799439011',
+    userId,
+    name: 'Cactus',
+    description: null,
+    photoUrl: null,
+    acquiredAt: null,
+    notes: null,
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+};
+
 describe('GET /plants', () => {
     const { app, mockPlantsService } = buildApp();
     afterAll(() => app.close());
     beforeEach(() => vi.clearAllMocks());
 
-    it('returns 200 with all plants', async () => {
-        const plants: Plant[] = [
-            { id: 'abc123', name: 'Cactus' },
-            { id: 'def456', name: 'Fern' },
-        ];
-        mockPlantsService.getAll.mockResolvedValue(plants);
+    it('returns 200 with all plants for the given userId', async () => {
+        mockPlantsService.getAll.mockResolvedValue([plant]);
 
-        const res = await app.inject({ method: 'GET', url: '/plants' });
+        const res = await app.inject({ method: 'GET', url: `/plants?userId=${userId}` });
 
         expect(res.statusCode).toBe(200);
-        expect(res.json()).toEqual(plants);
+        expect(res.json()).toEqual([plant]);
+        expect(mockPlantsService.getAll).toHaveBeenCalledExactlyOnceWith(userId);
+    });
+
+    it('returns 400 when userId query param is missing', async () => {
+        const res = await app.inject({ method: 'GET', url: '/plants' });
+
+        expect(res.statusCode).toBe(400);
+        expect(mockPlantsService.getAll).not.toHaveBeenCalled();
     });
 });
 
@@ -48,7 +66,6 @@ describe('GET /plants/:id', () => {
     beforeEach(() => vi.clearAllMocks());
 
     it('returns 200 with the plant when found', async () => {
-        const plant: Plant = { id: '507f1f77bcf86cd799439011', name: 'Cactus' };
         mockPlantsService.getById.mockResolvedValue(plant);
 
         const res = await app.inject({ method: 'GET', url: '/plants/507f1f77bcf86cd799439011' });
@@ -79,25 +96,35 @@ describe('POST /plants', () => {
     beforeEach(() => vi.clearAllMocks());
 
     it('returns 201 with the created plant and a Location header', async () => {
-        const plant: Plant = { id: 'abc123', name: 'Cactus' };
         mockPlantsService.create.mockResolvedValue(plant);
 
         const res = await app.inject({
             method: 'POST',
             url: '/plants',
-            payload: { name: 'Cactus' },
+            payload: { userId, name: 'Cactus' },
         });
 
         expect(res.statusCode).toBe(201);
         expect(res.json()).toEqual(plant);
-        expect(res.headers['location']).toBe('/plants/abc123');
+        expect(res.headers['location']).toBe('/plants/507f1f77bcf86cd799439011');
     });
 
     it('returns 400 when the request body is missing name', async () => {
         const res = await app.inject({
             method: 'POST',
             url: '/plants',
-            payload: {},
+            payload: { userId },
+        });
+
+        expect(res.statusCode).toBe(400);
+        expect(mockPlantsService.create).not.toHaveBeenCalled();
+    });
+
+    it('returns 400 when the request body is missing userId', async () => {
+        const res = await app.inject({
+            method: 'POST',
+            url: '/plants',
+            payload: { name: 'Cactus' },
         });
 
         expect(res.statusCode).toBe(400);

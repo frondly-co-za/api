@@ -1,17 +1,17 @@
-import { Plant, PlantsRepository } from '$domain/plant.js';
+import { Plant, CreatePlantData, PlantsRepository } from '$domain/plant.js';
 
 export class PlantsService {
     constructor(private readonly plants: PlantsRepository) {}
 
-    getAll(): Promise<Plant[]> {
-        return this.plants.findAll();
+    getAll(userId: string): Promise<Plant[]> {
+        return this.plants.findAll(userId);
     }
 
     getById(id: string): Promise<Plant | null> {
         return this.plants.findById(id);
     }
 
-    create(name: string): Promise<Plant> {
-        return this.plants.create(name);
+    create(data: CreatePlantData): Promise<Plant> {
+        return this.plants.create(data);
     }
 }
