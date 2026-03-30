@@ -66,7 +66,7 @@ describe('GET /plants', () => {
     });
 });
 
-describe('GET /plants/:id', () => {
+describe('GET /plants/:plantId', () => {
     const { app, mockPlantsService } = buildApp();
     afterAll(() => app.close());
     beforeEach(() => vi.clearAllMocks());

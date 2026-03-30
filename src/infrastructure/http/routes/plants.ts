@@ -1,6 +1,8 @@
 import { Static, Type } from 'typebox';
 import { FastifyPluginCallback } from 'fastify';
 import { PlantSchema } from '$domain/plant.js';
+import careSchedulesRoute from './care-schedules.js';
+import careLogsRoute from './care-logs.js';
 
 const CreatePlantBody = Type.Object({
     name: Type.String(),
@@ -11,7 +13,7 @@ const CreatePlantBody = Type.Object({
 });
 type CreatePlantBody = Static<typeof CreatePlantBody>;
 
-const PlantParams = Type.Object({ id: Type.String({ pattern: '^[0-9a-f]{24}$' }) });
+const PlantParams = Type.Object({ plantId: Type.String({ pattern: '^[0-9a-f]{24}$' }) });
 type PlantParams = Static<typeof PlantParams>;
 
 const plantsRoute: FastifyPluginCallback = (fastify, _opts, done) => {
@@ -24,10 +26,10 @@ const plantsRoute: FastifyPluginCallback = (fastify, _opts, done) => {
     );
 
     fastify.get<{ Params: PlantParams }>(
-        '/:id',
+        '/:plantId',
         { schema: { params: PlantParams, response: { 200: PlantSchema } } },
         async (request, reply) => {
-            const plant = await fastify.plantsService.getById(request.params.id);
+            const plant = await fastify.plantsService.getById(request.params.plantId);
             if (!plant) return reply.status(404).send();
             return plant;
         }
@@ -50,6 +52,8 @@ const plantsRoute: FastifyPluginCallback = (fastify, _opts, done) => {
         }
     );
 
+    fastify.register(careSchedulesRoute, { prefix: '/:plantId/schedules' });
+    fastify.register(careLogsRoute, { prefix: '/:plantId/logs', scheduleContext: false });
     done();
 };
 

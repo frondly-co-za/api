@@ -12,7 +12,12 @@ declare module 'fastify' {
 const authPlugin: FastifyPluginCallback = (fastify) => {
     fastify.decorateRequest('user', null);
 
-    fastify.addHook('preHandler', async (request, reply) => {
+    fastify.addHook('onRequest', async (request, reply) => {
+        // Any route can set config: { public: true } to skip auth
+        if ((request.routeOptions.config as { public?: boolean })?.public) {
+            return;
+        }
+
         const authHeader = request.headers.authorization;
         if (!authHeader?.startsWith('Bearer ')) {
             return reply
