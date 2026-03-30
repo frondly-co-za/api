@@ -2,10 +2,22 @@ import { describe, it, expect, vi, afterAll, beforeEach } from 'vitest';
 import Fastify from 'fastify';
 import plantsRoute from '$infrastructure/http/routes/plants.js';
 import type { Plant } from '$domain/plant.js';
+import type { User } from '$domain/user.js';
+
+const testUser: User = {
+    id: '507f1f77bcf86cd799439012',
+    auth0Sub: 'auth0|test',
+    email: 'test@example.com',
+    name: 'Test User',
+    timezone: 'Africa/Johannesburg',
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+};
 
 /**
  * Build a minimal Fastify app with the plants route and a mocked plantsService.
  * No DB or real plugins are loaded — we decorate directly before registering routes.
+ * request.user is set via a preHandler, mirroring what the real auth plugin does.
  */
 function buildApp() {
     const app = Fastify({ logger: false });
@@ -16,18 +28,19 @@ function buildApp() {
         create: vi.fn<(data: object) => Promise<Plant>>(),
     };
 
-    // Decorate before registering routes so the plugin can access it
+    app.decorateRequest('user', null);
+    app.addHook('preHandler', async (request) => {
+        request.user = testUser;
+    });
     app.decorate('plantsService', mockPlantsService as never);
     app.register(plantsRoute, { prefix: '/plants' });
 
     return { app, mockPlantsService };
 }
 
-const userId = '507f1f77bcf86cd799439012';
-
 const plant: Plant = {
     id: '507f1f77bcf86cd799439011',
-    userId,
+    userId: testUser.id,
     name: 'Cactus',
     description: null,
     photoUrl: null,
@@ -42,21 +55,14 @@ describe('GET /plants', () => {
     afterAll(() => app.close());
     beforeEach(() => vi.clearAllMocks());
 
-    it('returns 200 with all plants for the given userId', async () => {
+    it('returns 200 with all plants for the authenticated user', async () => {
         mockPlantsService.getAll.mockResolvedValue([plant]);
 
-        const res = await app.inject({ method: 'GET', url: `/plants?userId=${userId}` });
+        const res = await app.inject({ method: 'GET', url: '/plants' });
 
         expect(res.statusCode).toBe(200);
         expect(res.json()).toEqual([plant]);
-        expect(mockPlantsService.getAll).toHaveBeenCalledExactlyOnceWith(userId);
-    });
-
-    it('returns 400 when userId query param is missing', async () => {
-        const res = await app.inject({ method: 'GET', url: '/plants' });
-
-        expect(res.statusCode).toBe(400);
-        expect(mockPlantsService.getAll).not.toHaveBeenCalled();
+        expect(mockPlantsService.getAll).toHaveBeenCalledExactlyOnceWith(testUser.id);
     });
 });
 
@@ -101,7 +107,7 @@ describe('POST /plants', () => {
         const res = await app.inject({
             method: 'POST',
             url: '/plants',
-            payload: { userId, name: 'Cactus' },
+            payload: { name: 'Cactus' },
         });
 
         expect(res.statusCode).toBe(201);
@@ -113,18 +119,7 @@ describe('POST /plants', () => {
         const res = await app.inject({
             method: 'POST',
             url: '/plants',
-            payload: { userId },
-        });
-
-        expect(res.statusCode).toBe(400);
-        expect(mockPlantsService.create).not.toHaveBeenCalled();
-    });
-
-    it('returns 400 when the request body is missing userId', async () => {
-        const res = await app.inject({
-            method: 'POST',
-            url: '/plants',
-            payload: { name: 'Cactus' },
+            payload: {},
         });
 
         expect(res.statusCode).toBe(400);
