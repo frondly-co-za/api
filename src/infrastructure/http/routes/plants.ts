@@ -30,7 +30,10 @@ const plantsRoutes: FastifyPluginCallback = (fastify, _opts, done) => {
         '/:plantId',
         { schema: { params: PlantParams, response: { 200: PlantSchema } } },
         async (request, reply) => {
-            const plant = await fastify.plantsRepository.findById(request.params.plantId);
+            const plant = await fastify.plantsRepository.findById(
+                request.user!.id,
+                request.params.plantId
+            );
             if (!plant) return reply.status(404).send();
             return plant;
         }

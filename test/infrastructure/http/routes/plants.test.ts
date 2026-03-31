@@ -23,8 +23,8 @@ function buildApp() {
     const app = Fastify({ logger: false });
 
     const mockPlantsRepository: PlantsRepository = {
-        findAll: vi.fn(),
-        findById: vi.fn(),
+        findAll: vi.fn<(userId: string) => Promise<Plant[]>>(),
+        findById: vi.fn<(userId: string, id: string) => Promise<Plant | null>>(),
         create: vi.fn(),
     };
 

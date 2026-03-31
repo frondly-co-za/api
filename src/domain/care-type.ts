@@ -24,8 +24,8 @@ export interface UpdateCareTypeData {
 
 export interface CareTypesRepository {
     findAll(userId: string): Promise<CareType[]>; // returns system defaults + user's own
-    findById(id: string): Promise<CareType | null>;
+    findById(userId: string, id: string): Promise<CareType | null>; // returns system or user-owned
     create(data: CreateCareTypeData): Promise<CareType>;
-    update(id: string, data: UpdateCareTypeData): Promise<CareType | null>;
-    delete(id: string): Promise<boolean>;
+    update(userId: string, id: string, data: UpdateCareTypeData): Promise<CareType | null>;
+    delete(userId: string, id: string): Promise<boolean>;
 }

@@ -34,16 +34,20 @@ export class MongoCareLogsRepository implements CareLogsRepository {
         };
     }
 
-    async findByPlantId(plantId: string, scheduleId?: string): Promise<CareLog[]> {
-        const query: Record<string, unknown> = { plantId: new ObjectId(plantId) };
+    async findByPlantId(userId: string, plantId: string, scheduleId?: string): Promise<CareLog[]> {
+        const query: Record<string, unknown> = {
+            userId: new ObjectId(userId),
+            plantId: new ObjectId(plantId)
+        };
         if (scheduleId !== undefined) query.scheduleId = new ObjectId(scheduleId);
         const docs = await this.collection.find(query).toArray();
         return docs.map((doc) => this.toCareLog(doc));
     }
 
-    async findById(plantId: string, id: string): Promise<CareLog | null> {
+    async findById(userId: string, plantId: string, id: string): Promise<CareLog | null> {
         const doc = await this.collection.findOne({
             _id: new ObjectId(id),
+            userId: new ObjectId(userId),
             plantId: new ObjectId(plantId)
         });
         return doc ? this.toCareLog(doc) : null;
@@ -67,9 +71,10 @@ export class MongoCareLogsRepository implements CareLogsRepository {
         return this.toCareLog(doc);
     }
 
-    async delete(plantId: string, id: string): Promise<boolean> {
+    async delete(userId: string, plantId: string, id: string): Promise<boolean> {
         const result = await this.collection.deleteOne({
             _id: new ObjectId(id),
+            userId: new ObjectId(userId),
             plantId: new ObjectId(plantId)
         });
         return result.deletedCount > 0;

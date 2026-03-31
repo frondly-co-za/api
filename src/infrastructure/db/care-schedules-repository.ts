@@ -47,8 +47,10 @@ export class MongoCareSchedulesRepository implements CareSchedulesRepository {
         };
     }
 
-    async findByPlantId(plantId: string): Promise<CareSchedule[]> {
-        const docs = await this.collection.find({ plantId: new ObjectId(plantId) }).toArray();
+    async findByPlantId(userId: string, plantId: string): Promise<CareSchedule[]> {
+        const docs = await this.collection
+            .find({ userId: new ObjectId(userId), plantId: new ObjectId(plantId) })
+            .toArray();
         return docs.map((doc) => this.toCareSchedule(doc));
     }
 
@@ -63,9 +65,10 @@ export class MongoCareSchedulesRepository implements CareSchedulesRepository {
         return docs.map((doc) => this.toCareSchedule(doc));
     }
 
-    async findById(plantId: string, id: string): Promise<CareSchedule | null> {
+    async findById(userId: string, plantId: string, id: string): Promise<CareSchedule | null> {
         const doc = await this.collection.findOne({
             _id: new ObjectId(id),
+            userId: new ObjectId(userId),
             plantId: new ObjectId(plantId)
         });
         return doc ? this.toCareSchedule(doc) : null;
@@ -93,7 +96,11 @@ export class MongoCareSchedulesRepository implements CareSchedulesRepository {
         return this.toCareSchedule(doc);
     }
 
-    async update(id: string, data: UpdateCareScheduleData): Promise<CareSchedule | null> {
+    async update(
+        userId: string,
+        id: string,
+        data: UpdateCareScheduleData
+    ): Promise<CareSchedule | null> {
         const $set: Partial<CareScheduleDocument> & { updatedAt: Date } = { updatedAt: new Date() };
         if (data.careTypeId !== undefined) $set.careTypeId = new ObjectId(data.careTypeId);
         if (data.selectedOption !== undefined) $set.selectedOption = data.selectedOption;
@@ -105,15 +112,18 @@ export class MongoCareSchedulesRepository implements CareSchedulesRepository {
         if (data.nextDue !== undefined) $set.nextDue = new Date(data.nextDue);
 
         const result = await this.collection.findOneAndUpdate(
-            { _id: new ObjectId(id) },
+            { _id: new ObjectId(id), userId: new ObjectId(userId) },
             { $set },
             { returnDocument: 'after' }
         );
         return result ? this.toCareSchedule(result) : null;
     }
 
-    async delete(id: string): Promise<boolean> {
-        const result = await this.collection.deleteOne({ _id: new ObjectId(id) });
+    async delete(userId: string, id: string): Promise<boolean> {
+        const result = await this.collection.deleteOne({
+            _id: new ObjectId(id),
+            userId: new ObjectId(userId)
+        });
         return result.deletedCount > 0;
     }
 }

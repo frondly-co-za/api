@@ -39,8 +39,11 @@ export class MongoPlantsRepository implements PlantsRepository {
         return docs.map((doc) => this.toPlant(doc));
     }
 
-    async findById(id: string): Promise<Plant | null> {
-        const doc = await this.collection.findOne({ _id: new ObjectId(id) });
+    async findById(userId: string, id: string): Promise<Plant | null> {
+        const doc = await this.collection.findOne({
+            _id: new ObjectId(id),
+            userId: new ObjectId(userId)
+        });
         return doc ? this.toPlant(doc) : null;
     }
 

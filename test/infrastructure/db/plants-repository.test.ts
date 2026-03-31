@@ -54,17 +54,24 @@ describe('findAll', () => {
 
 describe('findById', () => {
     it('returns null when no plant has that id', async () => {
-        expect(await repo.findById(new ObjectId().toHexString())).toBeNull();
+        expect(await repo.findById(userId, new ObjectId().toHexString())).toBeNull();
     });
 
     it('returns the plant when it exists', async () => {
         const created = await createPlant('Cactus');
 
-        expect(await repo.findById(created.id)).toEqual(created);
+        expect(await repo.findById(userId, created.id)).toEqual(created);
+    });
+
+    it('returns null when the plant belongs to a different user', async () => {
+        const created = await createPlant('Cactus');
+        const otherUserId = new ObjectId().toHexString();
+
+        expect(await repo.findById(otherUserId, created.id)).toBeNull();
     });
 
     it('throws when given a string that is not a valid ObjectId', async () => {
-        await expect(repo.findById('not-a-valid-id')).rejects.toThrow();
+        await expect(repo.findById(userId, 'not-a-valid-id')).rejects.toThrow();
     });
 });
 
@@ -81,7 +88,7 @@ describe('create', () => {
         expect(plant.updatedAt).toBeTypeOf('string');
 
         // Verify it was actually persisted
-        expect(await repo.findById(plant.id)).toEqual(plant);
+        expect(await repo.findById(userId, plant.id)).toEqual(plant);
     });
 
     it('stores acquiredAt when provided', async () => {

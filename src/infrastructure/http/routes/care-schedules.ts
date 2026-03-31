@@ -41,7 +41,10 @@ const careSchedulesRoutes: FastifyPluginCallback = (fastify, _opts, done) => {
         '/',
         { schema: { params: PlantParams, response: { 200: Type.Array(CareScheduleSchema) } } },
         async (request) => {
-            return fastify.careSchedulesService.getByPlantId(request.params.plantId);
+            return fastify.careSchedulesService.getByPlantId(
+                request.user!.id,
+                request.params.plantId
+            );
         }
     );
 
@@ -50,7 +53,11 @@ const careSchedulesRoutes: FastifyPluginCallback = (fastify, _opts, done) => {
         { schema: { params: PlantScheduleParams, response: { 200: CareScheduleSchema } } },
         async (request, reply) => {
             const { plantId, scheduleId } = request.params;
-            const schedule = await fastify.careSchedulesService.getById(plantId, scheduleId);
+            const schedule = await fastify.careSchedulesService.getById(
+                request.user!.id,
+                plantId,
+                scheduleId
+            );
             if (!schedule) return reply.status(404).send();
             return schedule;
         }
@@ -95,6 +102,7 @@ const careSchedulesRoutes: FastifyPluginCallback = (fastify, _opts, done) => {
         },
         async (request, reply) => {
             const schedule = await fastify.careSchedulesService.update(
+                request.user!.id,
                 request.params.scheduleId,
                 request.body
             );
@@ -107,7 +115,10 @@ const careSchedulesRoutes: FastifyPluginCallback = (fastify, _opts, done) => {
         '/:scheduleId',
         { schema: { params: PlantScheduleParams } },
         async (request, reply) => {
-            const deleted = await fastify.careSchedulesService.delete(request.params.scheduleId);
+            const deleted = await fastify.careSchedulesService.delete(
+                request.user!.id,
+                request.params.scheduleId
+            );
             if (!deleted) return reply.status(404).send();
             return reply.status(204).send();
         }

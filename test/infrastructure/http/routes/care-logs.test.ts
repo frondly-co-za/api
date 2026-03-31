@@ -21,10 +21,10 @@ const SCHEDULE_BASE = `/plants/${plantId}/schedules/${scheduleId}/logs`;
 
 function buildMockService() {
     return {
-        getByPlantId: vi.fn<(plantId: string, scheduleId?: string) => Promise<CareLog[]>>(),
-        getById: vi.fn<(plantId: string, id: string) => Promise<CareLog | null>>(),
+        getByPlantId: vi.fn<(userId: string, plantId: string, scheduleId?: string) => Promise<CareLog[]>>(),
+        getById: vi.fn<(userId: string, plantId: string, id: string) => Promise<CareLog | null>>(),
         create: vi.fn<(data: object) => Promise<CareLog | null>>(),
-        delete: vi.fn<(plantId: string, id: string) => Promise<boolean>>(),
+        delete: vi.fn<(userId: string, plantId: string, id: string) => Promise<boolean>>(),
     };
 }
 
@@ -78,6 +78,7 @@ describe('GET /plants/:plantId/logs', () => {
         expect(res.statusCode).toBe(200);
         expect(res.json()).toEqual([log]);
         expect(mockCareLogsService.getByPlantId).toHaveBeenCalledExactlyOnceWith(
+            testUser.id,
             plantId,
             undefined
         );
@@ -181,6 +182,7 @@ describe('GET /plants/:plantId/schedules/:scheduleId/logs', () => {
 
         expect(res.statusCode).toBe(200);
         expect(mockCareLogsService.getByPlantId).toHaveBeenCalledExactlyOnceWith(
+            testUser.id,
             plantId,
             scheduleId
         );

@@ -31,7 +31,10 @@ const careTypesRoutes: FastifyPluginCallback = (fastify, _opts, done) => {
         '/:typeId',
         { schema: { params: IdParams, response: { 200: CareTypeSchema } } },
         async (request, reply) => {
-            const careType = await fastify.careTypesRepository.findById(request.params.typeId);
+            const careType = await fastify.careTypesRepository.findById(
+                request.user!.id,
+                request.params.typeId
+            );
             if (!careType) return reply.status(404).send();
             return careType;
         }
@@ -65,6 +68,7 @@ const careTypesRoutes: FastifyPluginCallback = (fastify, _opts, done) => {
         },
         async (request, reply) => {
             const careType = await fastify.careTypesRepository.update(
+                request.user!.id,
                 request.params.typeId,
                 request.body
             );
@@ -77,7 +81,10 @@ const careTypesRoutes: FastifyPluginCallback = (fastify, _opts, done) => {
         '/:typeId',
         { schema: { params: IdParams } },
         async (request, reply) => {
-            const deleted = await fastify.careTypesRepository.delete(request.params.typeId);
+            const deleted = await fastify.careTypesRepository.delete(
+                request.user!.id,
+                request.params.typeId
+            );
             if (!deleted) return reply.status(404).send();
             return reply.status(204).send();
         }

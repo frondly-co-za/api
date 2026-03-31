@@ -31,8 +31,8 @@ export type ResolvedCreateCareLogData = Omit<CreateCareLogData, 'careTypeId'> & 
 };
 
 export interface CareLogsRepository {
-    findByPlantId(plantId: string, scheduleId?: string): Promise<CareLog[]>;
-    findById(plantId: string, id: string): Promise<CareLog | null>;
+    findByPlantId(userId: string, plantId: string, scheduleId?: string): Promise<CareLog[]>;
+    findById(userId: string, plantId: string, id: string): Promise<CareLog | null>;
     create(data: ResolvedCreateCareLogData): Promise<CareLog>;
-    delete(plantId: string, id: string): Promise<boolean>;
+    delete(userId: string, plantId: string, id: string): Promise<boolean>;
 }

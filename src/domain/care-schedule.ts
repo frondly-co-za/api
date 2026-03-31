@@ -51,10 +51,10 @@ export interface UpdateCareScheduleData {
 }
 
 export interface CareSchedulesRepository {
-    findByPlantId(plantId: string): Promise<CareSchedule[]>;
+    findByPlantId(userId: string, plantId: string): Promise<CareSchedule[]>;
     findDue(userId: string, asOf: string): Promise<CareSchedule[]>; // nextDue <= asOf
-    findById(plantId: string, id: string): Promise<CareSchedule | null>;
+    findById(userId: string, plantId: string, id: string): Promise<CareSchedule | null>;
     create(data: CreateCareScheduleData): Promise<CareSchedule>;
-    update(id: string, data: UpdateCareScheduleData): Promise<CareSchedule | null>;
-    delete(id: string): Promise<boolean>;
+    update(userId: string, id: string, data: UpdateCareScheduleData): Promise<CareSchedule | null>;
+    delete(userId: string, id: string): Promise<boolean>;
 }

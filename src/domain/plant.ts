@@ -25,6 +25,6 @@ export interface CreatePlantData {
 
 export interface PlantsRepository {
     findAll(userId: string): Promise<Plant[]>;
-    findById(id: string): Promise<Plant | null>;
+    findById(userId: string, id: string): Promise<Plant | null>;
     create(data: CreatePlantData): Promise<Plant>;
 }

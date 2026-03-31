@@ -9,16 +9,16 @@ import { computeNextDue } from './next-due.js';
 export class CareSchedulesService {
     constructor(private readonly careSchedules: CareSchedulesRepository) {}
 
-    getByPlantId(plantId: string): Promise<CareSchedule[]> {
-        return this.careSchedules.findByPlantId(plantId);
+    getByPlantId(userId: string, plantId: string): Promise<CareSchedule[]> {
+        return this.careSchedules.findByPlantId(userId, plantId);
     }
 
     getDue(userId: string, asOf: string): Promise<CareSchedule[]> {
         return this.careSchedules.findDue(userId, asOf);
     }
 
-    getById(plantId: string, id: string): Promise<CareSchedule | null> {
-        return this.careSchedules.findById(plantId, id);
+    getById(userId: string, plantId: string, id: string): Promise<CareSchedule | null> {
+        return this.careSchedules.findById(userId, plantId, id);
     }
 
     create(input: Omit<CreateCareScheduleData, 'nextDue'>): Promise<CareSchedule> {
@@ -26,8 +26,12 @@ export class CareSchedulesService {
         return this.careSchedules.create({ ...input, nextDue: nextDue.toISOString() });
     }
 
-    async update(id: string, data: UpdateCareScheduleData): Promise<CareSchedule | null> {
-        const updated = await this.careSchedules.update(id, data);
+    async update(
+        userId: string,
+        id: string,
+        data: UpdateCareScheduleData
+    ): Promise<CareSchedule | null> {
+        const updated = await this.careSchedules.update(userId, id, data);
         if (!updated) return null;
 
         const recurrenceChanged =
@@ -43,14 +47,15 @@ export class CareSchedulesService {
                 updated.months
             );
             return (
-                (await this.careSchedules.update(id, { nextDue: nextDue.toISOString() })) ?? updated
+                (await this.careSchedules.update(userId, id, { nextDue: nextDue.toISOString() })) ??
+                updated
             );
         }
 
         return updated;
     }
 
-    delete(id: string): Promise<boolean> {
-        return this.careSchedules.delete(id);
+    delete(userId: string, id: string): Promise<boolean> {
+        return this.careSchedules.delete(userId, id);
     }
 }

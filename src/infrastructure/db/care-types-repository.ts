@@ -40,8 +40,11 @@ export class MongoCareTypesRepository implements CareTypesRepository {
         return docs.map((doc) => this.toCareType(doc));
     }
 
-    async findById(id: string): Promise<CareType | null> {
-        const doc = await this.collection.findOne({ _id: new ObjectId(id) });
+    async findById(userId: string, id: string): Promise<CareType | null> {
+        const doc = await this.collection.findOne({
+            _id: new ObjectId(id),
+            $or: [{ userId: null }, { userId: new ObjectId(userId) }]
+        });
         return doc ? this.toCareType(doc) : null;
     }
 
@@ -60,17 +63,20 @@ export class MongoCareTypesRepository implements CareTypesRepository {
         return this.toCareType(doc);
     }
 
-    async update(id: string, data: UpdateCareTypeData): Promise<CareType | null> {
+    async update(userId: string, id: string, data: UpdateCareTypeData): Promise<CareType | null> {
         const result = await this.collection.findOneAndUpdate(
-            { _id: new ObjectId(id) },
+            { _id: new ObjectId(id), userId: new ObjectId(userId) },
             { $set: { ...data, updatedAt: new Date() } },
             { returnDocument: 'after' }
         );
         return result ? this.toCareType(result) : null;
     }
 
-    async delete(id: string): Promise<boolean> {
-        const result = await this.collection.deleteOne({ _id: new ObjectId(id) });
+    async delete(userId: string, id: string): Promise<boolean> {
+        const result = await this.collection.deleteOne({
+            _id: new ObjectId(id),
+            userId: new ObjectId(userId)
+        });
         return result.deletedCount > 0;
     }
 }

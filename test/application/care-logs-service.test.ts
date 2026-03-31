@@ -10,18 +10,18 @@ vi.mock('$application/next-due.js', () => ({
 import { computeNextDue } from '$application/next-due.js';
 
 const mockLogsRepo: CareLogsRepository = {
-    findByPlantId: vi.fn(),
-    findById: vi.fn(),
+    findByPlantId: vi.fn<(userId: string, plantId: string, scheduleId?: string) => Promise<CareLog[]>>(),
+    findById: vi.fn<(userId: string, plantId: string, id: string) => Promise<CareLog | null>>(),
     create: vi.fn(),
-    delete: vi.fn(),
+    delete: vi.fn<(userId: string, plantId: string, id: string) => Promise<boolean>>(),
 };
 
 const mockSchedulesRepo: CareSchedulesRepository = {
     findByPlantId: vi.fn(),
     findDue: vi.fn(),
-    findById: vi.fn(),
+    findById: vi.fn<(userId: string, plantId: string, id: string) => Promise<CareSchedule | null>>(),
     create: vi.fn(),
-    update: vi.fn(),
+    update: vi.fn<(userId: string, id: string, data: object) => Promise<CareSchedule | null>>(),
     delete: vi.fn(),
 };
 
@@ -66,16 +66,16 @@ describe('getByPlantId', () => {
     it('delegates to repo.findByPlantId without scheduleId', async () => {
         vi.mocked(mockLogsRepo.findByPlantId).mockResolvedValue([log]);
 
-        expect(await service.getByPlantId(plantId)).toEqual([log]);
-        expect(mockLogsRepo.findByPlantId).toHaveBeenCalledExactlyOnceWith(plantId, undefined);
+        expect(await service.getByPlantId(userId, plantId)).toEqual([log]);
+        expect(mockLogsRepo.findByPlantId).toHaveBeenCalledExactlyOnceWith(userId, plantId, undefined);
     });
 
     it('delegates to repo.findByPlantId with scheduleId', async () => {
         vi.mocked(mockLogsRepo.findByPlantId).mockResolvedValue([log]);
 
-        await service.getByPlantId(plantId, scheduleId);
+        await service.getByPlantId(userId, plantId, scheduleId);
 
-        expect(mockLogsRepo.findByPlantId).toHaveBeenCalledExactlyOnceWith(plantId, scheduleId);
+        expect(mockLogsRepo.findByPlantId).toHaveBeenCalledExactlyOnceWith(userId, plantId, scheduleId);
     });
 });
 
@@ -83,8 +83,8 @@ describe('getById', () => {
     it('delegates to repo.findById', async () => {
         vi.mocked(mockLogsRepo.findById).mockResolvedValue(log);
 
-        expect(await service.getById(plantId, log.id)).toEqual(log);
-        expect(mockLogsRepo.findById).toHaveBeenCalledExactlyOnceWith(plantId, log.id);
+        expect(await service.getById(userId, plantId, log.id)).toEqual(log);
+        expect(mockLogsRepo.findById).toHaveBeenCalledExactlyOnceWith(userId, plantId, log.id);
     });
 });
 
@@ -133,7 +133,7 @@ describe('create (scheduled)', () => {
             expect.objectContaining({ careTypeId, scheduleId })
         );
         expect(computeNextDue).toHaveBeenCalledOnce();
-        expect(mockSchedulesRepo.update).toHaveBeenCalledExactlyOnceWith(scheduleId, {
+        expect(mockSchedulesRepo.update).toHaveBeenCalledExactlyOnceWith(userId, scheduleId, {
             nextDue: '2026-04-07T00:00:00.000Z'
         });
     });
@@ -180,13 +180,13 @@ describe('delete', () => {
     it('returns true when deleted', async () => {
         vi.mocked(mockLogsRepo.delete).mockResolvedValue(true);
 
-        expect(await service.delete(plantId, log.id)).toBe(true);
-        expect(mockLogsRepo.delete).toHaveBeenCalledExactlyOnceWith(plantId, log.id);
+        expect(await service.delete(userId, plantId, log.id)).toBe(true);
+        expect(mockLogsRepo.delete).toHaveBeenCalledExactlyOnceWith(userId, plantId, log.id);
     });
 
     it('returns false when not found', async () => {
         vi.mocked(mockLogsRepo.delete).mockResolvedValue(false);
 
-        expect(await service.delete(plantId, log.id)).toBe(false);
+        expect(await service.delete(userId, plantId, log.id)).toBe(false);
     });
 });

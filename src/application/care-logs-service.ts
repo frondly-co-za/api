@@ -8,19 +8,23 @@ export class CareLogsService {
         private readonly careSchedules: CareSchedulesRepository
     ) {}
 
-    getByPlantId(plantId: string, scheduleId?: string): Promise<CareLog[]> {
-        return this.careLogs.findByPlantId(plantId, scheduleId);
+    getByPlantId(userId: string, plantId: string, scheduleId?: string): Promise<CareLog[]> {
+        return this.careLogs.findByPlantId(userId, plantId, scheduleId);
     }
 
-    getById(plantId: string, id: string): Promise<CareLog | null> {
-        return this.careLogs.findById(plantId, id);
+    getById(userId: string, plantId: string, id: string): Promise<CareLog | null> {
+        return this.careLogs.findById(userId, plantId, id);
     }
 
     async create(data: CreateCareLogData): Promise<CareLog | null> {
         let { careTypeId } = data;
 
         if (data.scheduleId) {
-            const schedule = await this.careSchedules.findById(data.plantId, data.scheduleId);
+            const schedule = await this.careSchedules.findById(
+                data.userId,
+                data.plantId,
+                data.scheduleId
+            );
             if (!schedule) return null;
             careTypeId ??= schedule.careTypeId;
 
@@ -32,7 +36,9 @@ export class CareLogsService {
                 schedule.dayOfMonth,
                 schedule.months
             );
-            await this.careSchedules.update(data.scheduleId, { nextDue: nextDue.toISOString() });
+            await this.careSchedules.update(data.userId, data.scheduleId, {
+                nextDue: nextDue.toISOString()
+            });
 
             return log;
         }
@@ -42,7 +48,7 @@ export class CareLogsService {
         return this.careLogs.create({ ...data, careTypeId });
     }
 
-    delete(plantId: string, id: string): Promise<boolean> {
-        return this.careLogs.delete(plantId, id);
+    delete(userId: string, plantId: string, id: string): Promise<boolean> {
+        return this.careLogs.delete(userId, plantId, id);
     }
 }

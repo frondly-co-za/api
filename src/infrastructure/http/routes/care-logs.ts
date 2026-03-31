@@ -46,7 +46,7 @@ const careLogsRoutes: FastifyPluginCallback<CareLogsOptions> = (fastify, opts, d
         { schema: { params: listParams, response: { 200: Type.Array(CareLogSchema) } } },
         async (request) => {
             const { plantId, scheduleId } = request.params;
-            return fastify.careLogsService.getByPlantId(plantId, scheduleId);
+            return fastify.careLogsService.getByPlantId(request.user!.id, plantId, scheduleId);
         }
     );
 
@@ -55,6 +55,7 @@ const careLogsRoutes: FastifyPluginCallback<CareLogsOptions> = (fastify, opts, d
         { schema: { params: itemParams, response: { 200: CareLogSchema } } },
         async (request, reply) => {
             const log = await fastify.careLogsService.getById(
+                request.user!.id,
                 request.params.plantId,
                 request.params.logId
             );
@@ -119,6 +120,7 @@ const careLogsRoutes: FastifyPluginCallback<CareLogsOptions> = (fastify, opts, d
         { schema: { params: itemParams } },
         async (request, reply) => {
             const deleted = await fastify.careLogsService.delete(
+                request.user!.id,
                 request.params.plantId,
                 request.params.logId
             );

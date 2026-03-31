@@ -22,11 +22,11 @@ function buildApp() {
     const app = Fastify({ logger: false });
 
     const mockCareSchedulesService = {
-        getByPlantId: vi.fn<(plantId: string) => Promise<CareSchedule[]>>(),
-        getById: vi.fn<(plantId: string, id: string) => Promise<CareSchedule | null>>(),
+        getByPlantId: vi.fn<(userId: string, plantId: string) => Promise<CareSchedule[]>>(),
+        getById: vi.fn<(userId: string, plantId: string, id: string) => Promise<CareSchedule | null>>(),
         create: vi.fn<(data: object) => Promise<CareSchedule>>(),
-        update: vi.fn<(id: string, data: object) => Promise<CareSchedule | null>>(),
-        delete: vi.fn<(id: string) => Promise<boolean>>(),
+        update: vi.fn<(userId: string, id: string, data: object) => Promise<CareSchedule | null>>(),
+        delete: vi.fn<(userId: string, id: string) => Promise<boolean>>(),
         getDue: vi.fn(),
     };
 
@@ -75,7 +75,7 @@ describe('GET /plants/:plantId/schedules', () => {
 
         expect(res.statusCode).toBe(200);
         expect(res.json()).toEqual([schedule]);
-        expect(mockCareSchedulesService.getByPlantId).toHaveBeenCalledExactlyOnceWith(plantId);
+        expect(mockCareSchedulesService.getByPlantId).toHaveBeenCalledExactlyOnceWith(testUser.id, plantId);
     });
 });
 
@@ -92,6 +92,7 @@ describe('GET /plants/:plantId/schedules/:scheduleId', () => {
         expect(res.statusCode).toBe(200);
         expect(res.json()).toEqual(schedule);
         expect(mockCareSchedulesService.getById).toHaveBeenCalledExactlyOnceWith(
+            testUser.id,
             plantId,
             schedule.id
         );

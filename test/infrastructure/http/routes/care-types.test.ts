@@ -18,11 +18,11 @@ function buildApp() {
     const app = Fastify({ logger: false });
 
     const mockCareTypesRepository: CareTypesRepository = {
-        findAll: vi.fn(),
-        findById: vi.fn(),
+        findAll: vi.fn<(userId: string) => Promise<CareType[]>>(),
+        findById: vi.fn<(userId: string, id: string) => Promise<CareType | null>>(),
         create: vi.fn(),
-        update: vi.fn(),
-        delete: vi.fn(),
+        update: vi.fn<(userId: string, id: string, data: object) => Promise<CareType | null>>(),
+        delete: vi.fn<(userId: string, id: string) => Promise<boolean>>(),
     };
 
     app.decorateRequest('user', null);
