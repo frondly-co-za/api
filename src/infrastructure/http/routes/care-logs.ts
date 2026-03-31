@@ -19,23 +19,27 @@ const ScheduledLogBody = Type.Object({
 });
 type CreateLogBody = Static<typeof ScheduledLogBody>;
 
+export type CareLogsContext = 'plant' | 'schedule';
+
 export interface CareLogsOptions {
-    scheduleContext: boolean;
+    context: CareLogsContext;
 }
 
 const careLogsRoutes: FastifyPluginCallback<CareLogsOptions> = (fastify, opts, done) => {
-    // Param schemas vary by context — scheduleId is only present in the scheduled context
-    const listParams = opts.scheduleContext
-        ? Type.Object({ plantId: Type.String(OID), scheduleId: Type.String(OID) })
-        : Type.Object({ plantId: Type.String(OID) });
+    // Param schemas vary by context — scheduleId is only present in the schedule context
+    const listParams =
+        opts.context === 'schedule'
+            ? Type.Object({ plantId: Type.String(OID), scheduleId: Type.String(OID) })
+            : Type.Object({ plantId: Type.String(OID) });
 
-    const itemParams = opts.scheduleContext
-        ? Type.Object({
-              plantId: Type.String(OID),
-              scheduleId: Type.String(OID),
-              logId: Type.String(OID)
-          })
-        : Type.Object({ plantId: Type.String(OID), logId: Type.String(OID) });
+    const itemParams =
+        opts.context === 'schedule'
+            ? Type.Object({
+                  plantId: Type.String(OID),
+                  scheduleId: Type.String(OID),
+                  logId: Type.String(OID)
+              })
+            : Type.Object({ plantId: Type.String(OID), logId: Type.String(OID) });
 
     type ListParams = { plantId: string; scheduleId?: string };
     type ItemParams = { plantId: string; scheduleId?: string; logId: string };
@@ -68,7 +72,7 @@ const careLogsRoutes: FastifyPluginCallback<CareLogsOptions> = (fastify, opts, d
         {
             schema: {
                 params: listParams,
-                body: opts.scheduleContext ? ScheduledLogBody : AdHocLogBody,
+                body: opts.context === 'schedule' ? ScheduledLogBody : AdHocLogBody,
                 response: { 201: CareLogSchema }
             }
         },

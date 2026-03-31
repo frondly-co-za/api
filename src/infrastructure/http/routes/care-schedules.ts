@@ -124,7 +124,7 @@ const careSchedulesRoutes: FastifyPluginCallback = (fastify, _opts, done) => {
         }
     );
 
-    fastify.register(careLogsRoutes, { prefix: '/:scheduleId/logs', scheduleContext: true });
+    fastify.register(careLogsRoutes, { prefix: '/:scheduleId/logs', context: 'schedule' });
     done();
 };
 

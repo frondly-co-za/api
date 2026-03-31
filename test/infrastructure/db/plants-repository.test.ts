@@ -27,7 +27,7 @@ beforeEach(async () => {
 });
 
 const createPlant = (name: string) =>
-    repo.create({ userId, name, description: null, photoUrl: null, acquiredAt: null, notes: null });
+    repo.create({ userId, name, description: null, acquiredAt: null, notes: null });
 
 describe('create', () => {
     it('persists the plant and returns it with a generated id', async () => {
@@ -51,7 +51,6 @@ describe('create', () => {
             userId,
             name: 'Monstera',
             description: 'Monstera Deliciosa',
-            photoUrl: null,
             acquiredAt,
             notes: 'Bought at the market',
         });
@@ -145,7 +144,6 @@ describe('update', () => {
             userId,
             name: 'Cactus',
             description: null,
-            photoUrl: null,
             acquiredAt: '2025-06-15T00:00:00.000Z',
             notes: null,
         });
@@ -174,5 +172,28 @@ describe('delete', () => {
 
         expect(await repo.delete(userId, plant.id)).toBe(true);
         expect(await repo.findById(userId, plant.id)).toBeNull();
+    });
+});
+
+describe('clearCoverPhoto', () => {
+    it('nulls coverPhotoId when it matches the given photoId', async () => {
+        const photoId = new ObjectId().toHexString();
+        const plant = await createPlant('Cactus');
+        await repo.update(userId, plant.id, { coverPhotoId: photoId });
+
+        await repo.clearCoverPhoto(userId, plant.id, photoId);
+
+        expect((await repo.findById(userId, plant.id))!.coverPhotoId).toBeNull();
+    });
+
+    it('does not change coverPhotoId when it does not match', async () => {
+        const photoId = new ObjectId().toHexString();
+        const otherPhotoId = new ObjectId().toHexString();
+        const plant = await createPlant('Cactus');
+        await repo.update(userId, plant.id, { coverPhotoId: photoId });
+
+        await repo.clearCoverPhoto(userId, plant.id, otherPhotoId);
+
+        expect((await repo.findById(userId, plant.id))!.coverPhotoId).toBe(photoId);
     });
 });

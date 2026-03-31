@@ -1,10 +1,12 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
+import multipart from '@fastify/multipart';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
 import plantsRoutes from './routes/plants.js';
 import careTypesRoutes from './routes/care-types.js';
 import schedulesRoutes from './routes/schedules.js';
+import photosRoutes from './routes/photos.js';
 import dbConnector from './plugins/db-connector.js';
 import services from './plugins/services.js';
 import auth from './plugins/auth.js';
@@ -16,6 +18,7 @@ const corsOrigin = process.env.CORS_ORIGIN
     ? process.env.CORS_ORIGIN.split(',').map((o) => o.trim())
     : true;
 fastify.register(cors, { origin: corsOrigin });
+fastify.register(multipart, { limits: { fileSize: 10 * 1024 * 1024 } });
 fastify.register(swagger, {
     openapi: {
         info: { title: 'Frondly API', version: '0.0.1' }
@@ -28,6 +31,7 @@ fastify.register(services);
 
 // Open routes
 fastify.register(swaggerUi, { routePrefix: '/swagger' });
+fastify.register(photosRoutes, { prefix: '/photos', context: 'serve' });
 
 // Authenticated Routes
 fastify.register((authenticatedRoutes, _opts, done) => {
@@ -35,6 +39,7 @@ fastify.register((authenticatedRoutes, _opts, done) => {
     authenticatedRoutes.register(plantsRoutes, { prefix: '/plants' });
     authenticatedRoutes.register(careTypesRoutes, { prefix: '/care-types' });
     authenticatedRoutes.register(schedulesRoutes, { prefix: '/schedules' });
+    authenticatedRoutes.register(photosRoutes, { prefix: '/photos', context: 'manage' });
     done();
 });
 

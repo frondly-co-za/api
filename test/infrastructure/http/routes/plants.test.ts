@@ -1,7 +1,10 @@
 import { describe, it, expect, vi, afterAll, beforeEach } from 'vitest';
 import Fastify from 'fastify';
+import multipart from '@fastify/multipart';
 import plantsRoute from '$infrastructure/http/routes/plants.js';
 import type { Plant, PlantsRepository } from '$domain/plant.js';
+import type { PhotosRepository } from '$domain/photo.js';
+import type { PhotosService } from '$application/photos-service.js';
 import type { User } from '$domain/user.js';
 
 const testUser: User = {
@@ -27,14 +30,33 @@ function buildApp() {
         findById: vi.fn<(userId: string, id: string) => Promise<Plant | null>>(),
         create: vi.fn(),
         update: vi.fn(),
+        clearCoverPhoto: vi.fn(),
         delete: vi.fn(),
     };
 
+    const mockPhotosRepository: PhotosRepository = {
+        findAllByPlant: vi.fn(),
+        findById: vi.fn(),
+        findByIdPublic: vi.fn(),
+        create: vi.fn(),
+        delete: vi.fn(),
+    };
+
+    const mockPhotosService = {
+        setCoverPhoto: vi.fn(),
+        uploadToPlant: vi.fn(),
+        delete: vi.fn(),
+        getFile: vi.fn(),
+    } as unknown as PhotosService;
+
+    app.register(multipart);
     app.decorateRequest('user', null);
     app.addHook('preHandler', async (request) => {
         request.user = testUser;
     });
     app.decorate('plantsRepository', mockPlantsRepository as never);
+    app.decorate('photosRepository', mockPhotosRepository as never);
+    app.decorate('photosService', mockPhotosService as never);
     app.register(plantsRoute, { prefix: '/plants' });
 
     return { app, mockPlantsRepository };
@@ -45,7 +67,7 @@ const plant: Plant = {
     userId: testUser.id,
     name: 'Cactus',
     description: null,
-    photoUrl: null,
+    coverPhotoId: null,
     acquiredAt: null,
     notes: null,
     createdAt: '2026-01-01T00:00:00.000Z',

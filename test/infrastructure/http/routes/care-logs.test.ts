@@ -34,7 +34,7 @@ function buildAdHocApp() {
     app.decorateRequest('user', null);
     app.addHook('preHandler', async (request) => { request.user = testUser; });
     app.decorate('careLogsService', mockCareLogsService as never);
-    app.register(careLogsRoute, { prefix: '/plants/:plantId/logs', scheduleContext: false });
+    app.register(careLogsRoute, { prefix: '/plants/:plantId/logs', context: 'plant' });
     return { app, mockCareLogsService };
 }
 
@@ -46,7 +46,7 @@ function buildScheduledApp() {
     app.decorate('careLogsService', mockCareLogsService as never);
     app.register(careLogsRoute, {
         prefix: '/plants/:plantId/schedules/:scheduleId/logs',
-        scheduleContext: true,
+        context: 'schedule',
     });
     return { app, mockCareLogsService };
 }

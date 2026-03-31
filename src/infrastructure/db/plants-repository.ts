@@ -6,7 +6,7 @@ interface PlantDocument {
     userId: ObjectId;
     name: string;
     description: string | null;
-    photoUrl: string | null;
+    coverPhotoId: ObjectId | null;
     acquiredAt: Date | null;
     notes: string | null;
     createdAt: Date;
@@ -26,7 +26,7 @@ export class MongoPlantsRepository implements PlantsRepository {
             userId: doc.userId.toHexString(),
             name: doc.name,
             description: doc.description,
-            photoUrl: doc.photoUrl,
+            coverPhotoId: doc.coverPhotoId ? doc.coverPhotoId.toHexString() : null,
             acquiredAt: doc.acquiredAt ? doc.acquiredAt.toISOString() : null,
             notes: doc.notes,
             createdAt: doc.createdAt.toISOString(),
@@ -55,7 +55,7 @@ export class MongoPlantsRepository implements PlantsRepository {
             userId: new ObjectId(data.userId),
             name: data.name,
             description: data.description,
-            photoUrl: data.photoUrl,
+            coverPhotoId: null,
             acquiredAt: data.acquiredAt ? new Date(data.acquiredAt) : null,
             notes: data.notes,
             createdAt: now,
@@ -66,7 +66,7 @@ export class MongoPlantsRepository implements PlantsRepository {
     }
 
     async update(userId: string, id: string, data: UpdatePlantData): Promise<Plant | null> {
-        const { acquiredAt, ...rest } = data;
+        const { acquiredAt, coverPhotoId, ...rest } = data;
         const $set: Partial<PlantDocument> & { updatedAt: Date } = {
             ...rest,
             updatedAt: new Date()
@@ -74,12 +74,26 @@ export class MongoPlantsRepository implements PlantsRepository {
         if (acquiredAt !== undefined) {
             $set.acquiredAt = acquiredAt ? new Date(acquiredAt) : null;
         }
+        if (coverPhotoId !== undefined) {
+            $set.coverPhotoId = coverPhotoId ? new ObjectId(coverPhotoId) : null;
+        }
         const result = await this.collection.findOneAndUpdate(
             { _id: new ObjectId(id), userId: new ObjectId(userId) },
             { $set },
             { returnDocument: 'after' }
         );
         return result ? this.toPlant(result) : null;
+    }
+
+    async clearCoverPhoto(userId: string, plantId: string, photoId: string): Promise<void> {
+        await this.collection.updateOne(
+            {
+                _id: new ObjectId(plantId),
+                userId: new ObjectId(userId),
+                coverPhotoId: new ObjectId(photoId)
+            },
+            { $set: { coverPhotoId: null, updatedAt: new Date() } }
+        );
     }
 
     async delete(userId: string, id: string): Promise<boolean> {

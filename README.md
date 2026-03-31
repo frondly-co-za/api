@@ -10,10 +10,10 @@ Copy `.env.example` to `.env` and fill in the values:
 
 ```
 MONGODB_URI=mongodb://user:password@localhost:27017/frondly-dev
-
-# Auth0 application settings (Machine to Machine or API)
 AUTH0_DOMAIN=your-tenant.eu.auth0.com
 AUTH0_AUDIENCE=https://api.frondly.co.za
+CORS_ORIGIN=http://localhost:5173,https://frondly.co.za
+PHOTO_STORAGE_PATH=./uploads
 ```
 
 Install dependencies and start the development server:

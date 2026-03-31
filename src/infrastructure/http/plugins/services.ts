@@ -8,9 +8,13 @@ import { MongoCareSchedulesRepository } from '$infrastructure/db/care-schedules-
 import { CareSchedulesService } from '$application/care-schedules-service.js';
 import { MongoCareLogsRepository } from '$infrastructure/db/care-logs-repository.js';
 import { CareLogsService } from '$application/care-logs-service.js';
+import { MongoPhotosRepository } from '$infrastructure/db/photos-repository.js';
+import { LocalPhotoStorage } from '$infrastructure/storage/local-photo-storage.js';
+import { PhotosService } from '$application/photos-service.js';
 import { PlantsRepository } from '$domain/plant.js';
 import { UsersRepository } from '$domain/user.js';
 import { CareTypesRepository } from '$domain/care-type.js';
+import { PhotosRepository } from '$domain/photo.js';
 
 declare module 'fastify' {
     interface FastifyInstance {
@@ -19,13 +23,16 @@ declare module 'fastify' {
         careTypesRepository: CareTypesRepository;
         careSchedulesService: CareSchedulesService;
         careLogsService: CareLogsService;
+        photosRepository: PhotosRepository;
+        photosService: PhotosService;
     }
 }
 
 function servicesPlugin(fastify: FastifyInstance) {
     if (!fastify.mongo.db) throw new Error('MongoDB not connected');
     const db: Db = fastify.mongo.db;
-    fastify.decorate('plantsRepository', new MongoPlantsRepository(db));
+    const plantsRepo = new MongoPlantsRepository(db);
+    fastify.decorate('plantsRepository', plantsRepo);
     fastify.decorate('usersRepository', new MongoUsersRepository(db));
     fastify.decorate('careTypesRepository', new MongoCareTypesRepository(db));
     const careSchedulesRepo = new MongoCareSchedulesRepository(db);
@@ -34,6 +41,10 @@ function servicesPlugin(fastify: FastifyInstance) {
         'careLogsService',
         new CareLogsService(new MongoCareLogsRepository(db), careSchedulesRepo)
     );
+    const photosRepo = new MongoPhotosRepository(db);
+    const photoStorage = new LocalPhotoStorage(process.env.PHOTO_STORAGE_PATH ?? './uploads');
+    fastify.decorate('photosRepository', photosRepo);
+    fastify.decorate('photosService', new PhotosService(photosRepo, plantsRepo, photoStorage));
 }
 
 export default fastifyPlugin(servicesPlugin);
