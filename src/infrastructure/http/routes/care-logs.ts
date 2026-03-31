@@ -9,16 +9,15 @@ const SharedLogFields = {
     performedAt: Type.Optional(Type.String({ format: 'date-time' }))
 };
 
-// Ad-hoc: no schedule to source careTypeId from, so it is required
+// Ad-hoc: careTypeId required (no schedule to fall back to)
 const AdHocLogBody = Type.Object({ careTypeId: Type.String(OID), ...SharedLogFields });
-type AdHocLogBody = Static<typeof AdHocLogBody>;
 
-// Scheduled: careTypeId falls back to the schedule's careTypeId if omitted
+// Scheduled: careTypeId optional (falls back to the schedule's careTypeId if omitted)
 const ScheduledLogBody = Type.Object({
     careTypeId: Type.Optional(Type.String(OID)),
     ...SharedLogFields
 });
-type ScheduledLogBody = Static<typeof ScheduledLogBody>;
+type CreateLogBody = Static<typeof ScheduledLogBody>;
 
 export interface CareLogsOptions {
     scheduleContext: boolean;
@@ -64,56 +63,34 @@ const careLogsRoutes: FastifyPluginCallback<CareLogsOptions> = (fastify, opts, d
         }
     );
 
-    if (opts.scheduleContext) {
-        fastify.post<{ Body: ScheduledLogBody; Params: ListParams }>(
-            '/',
-            {
-                schema: {
-                    params: listParams,
-                    body: ScheduledLogBody,
-                    response: { 201: CareLogSchema }
-                }
-            },
-            async (request, reply) => {
-                const { plantId, scheduleId } = request.params;
-                const { careTypeId, selectedOption, notes, performedAt } = request.body;
-                const log = await fastify.careLogsService.create({
-                    userId: request.user!.id,
-                    plantId,
-                    scheduleId: scheduleId!,
-                    careTypeId,
-                    selectedOption: selectedOption ?? null,
-                    notes: notes ?? null,
-                    performedAt: performedAt ?? new Date().toISOString()
-                });
-                if (!log) return reply.status(404).send();
-                const location = `/plants/${plantId}/schedules/${scheduleId}/logs/${log.id}`;
-                return reply.status(201).header('Location', location).send(log);
+    fastify.post<{ Body: CreateLogBody; Params: ListParams }>(
+        '/',
+        {
+            schema: {
+                params: listParams,
+                body: opts.scheduleContext ? ScheduledLogBody : AdHocLogBody,
+                response: { 201: CareLogSchema }
             }
-        );
-    } else {
-        fastify.post<{ Body: AdHocLogBody; Params: ListParams }>(
-            '/',
-            {
-                schema: { params: listParams, body: AdHocLogBody, response: { 201: CareLogSchema } }
-            },
-            async (request, reply) => {
-                const { plantId } = request.params;
-                const { careTypeId, selectedOption, notes, performedAt } = request.body;
-                const log = await fastify.careLogsService.create({
-                    userId: request.user!.id,
-                    plantId,
-                    scheduleId: null,
-                    careTypeId,
-                    selectedOption: selectedOption ?? null,
-                    notes: notes ?? null,
-                    performedAt: performedAt ?? new Date().toISOString()
-                });
-                const location = `/plants/${plantId}/logs/${log!.id}`;
-                return reply.status(201).header('Location', location).send(log);
-            }
-        );
-    }
+        },
+        async (request, reply) => {
+            const { plantId, scheduleId } = request.params;
+            const { careTypeId, selectedOption, notes, performedAt } = request.body;
+            const log = await fastify.careLogsService.create({
+                userId: request.user!.id,
+                plantId,
+                scheduleId: scheduleId ?? null,
+                careTypeId,
+                selectedOption: selectedOption ?? null,
+                notes: notes ?? null,
+                performedAt: performedAt ?? new Date().toISOString()
+            });
+            if (!log) return reply.status(404).send();
+            const location = scheduleId
+                ? `/plants/${plantId}/schedules/${scheduleId}/logs/${log.id}`
+                : `/plants/${plantId}/logs/${log.id}`;
+            return reply.status(201).header('Location', location).send(log);
+        }
+    );
 
     fastify.delete<{ Params: ItemParams }>(
         '/:logId',
