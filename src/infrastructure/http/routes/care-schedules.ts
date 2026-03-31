@@ -85,8 +85,10 @@ const careSchedulesRoutes: FastifyPluginCallback = (fastify, _opts, done) => {
                 dayOfMonth: dayOfMonth ?? [],
                 months: months ?? []
             });
-            const location = `/plants/${plantId}/schedules/${schedule.id}`;
-            return reply.status(201).header('Location', location).send(schedule);
+            return reply
+                .status(201)
+                .header('Location', `${request.url}/${schedule.id}`)
+                .send(schedule);
         }
     );
 

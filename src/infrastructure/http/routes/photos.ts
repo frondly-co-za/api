@@ -16,6 +16,7 @@ export type PhotosContext = 'plant' | 'serve' | 'manage';
 
 export interface PhotosOptions {
     context: PhotosContext;
+    servePrefix?: string;
 }
 
 const photosRoutes: FastifyPluginCallback<PhotosOptions> = (fastify, opts, done) => {
@@ -66,7 +67,11 @@ const photosRoutes: FastifyPluginCallback<PhotosOptions> = (fastify, opts, done)
                     setAsCover: request.query.setAsCover
                 });
 
-                return reply.status(201).header('Location', `/photos/${photo.id}`).send(photo);
+                const servePrefix = opts.servePrefix ?? '/photos';
+                return reply
+                    .status(201)
+                    .header('Location', `${servePrefix}/${photo.id}`)
+                    .send(photo);
             }
         );
     }

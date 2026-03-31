@@ -106,7 +106,11 @@ const plantsRoutes: FastifyPluginCallback = (fastify, _opts, done) => {
 
     fastify.register(careSchedulesRoutes, { prefix: '/:plantId/schedules' });
     fastify.register(careLogsRoutes, { prefix: '/:plantId/logs' });
-    fastify.register(photosRoutes, { prefix: '/:plantId/photos', context: 'plant' });
+    fastify.register(photosRoutes, {
+        prefix: '/:plantId/photos',
+        context: 'plant',
+        servePrefix: '/photos'
+    });
     done();
 };
 

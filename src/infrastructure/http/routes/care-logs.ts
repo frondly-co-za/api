@@ -59,10 +59,7 @@ const careLogsRoutes: FastifyPluginCallback = (fastify, _opts, done) => {
                 performedAt: performedAt ?? new Date().toISOString()
             });
             if (!log) return reply.status(404).send();
-            return reply
-                .status(201)
-                .header('Location', `/plants/${plantId}/logs/${log.id}`)
-                .send(log);
+            return reply.status(201).header('Location', `${request.url}/${log.id}`).send(log);
         }
     );
 
