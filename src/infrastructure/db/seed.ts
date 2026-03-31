@@ -39,7 +39,9 @@ async function seed() {
         }
     }
 
-    console.log(`Seeded ${inserted} system care type(s) (${SYSTEM_CARE_TYPES.length - inserted} already existed).`);
+    console.log(
+        `Seeded ${inserted} system care type(s) (${SYSTEM_CARE_TYPES.length - inserted} already existed).`
+    );
     await client.close();
 }
 
