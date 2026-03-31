@@ -63,8 +63,11 @@ export class MongoCareSchedulesRepository implements CareSchedulesRepository {
         return docs.map((doc) => this.toCareSchedule(doc));
     }
 
-    async findById(id: string): Promise<CareSchedule | null> {
-        const doc = await this.collection.findOne({ _id: new ObjectId(id) });
+    async findById(plantId: string, id: string): Promise<CareSchedule | null> {
+        const doc = await this.collection.findOne({
+            _id: new ObjectId(id),
+            plantId: new ObjectId(plantId)
+        });
         return doc ? this.toCareSchedule(doc) : null;
     }
 
@@ -98,6 +101,8 @@ export class MongoCareSchedulesRepository implements CareSchedulesRepository {
         if (data.dayOfWeek !== undefined) $set.dayOfWeek = data.dayOfWeek;
         if (data.dayOfMonth !== undefined) $set.dayOfMonth = data.dayOfMonth;
         if (data.months !== undefined) $set.months = data.months;
+        if (data.isActive !== undefined) $set.isActive = data.isActive;
+        if (data.nextDue !== undefined) $set.nextDue = new Date(data.nextDue);
 
         const result = await this.collection.findOneAndUpdate(
             { _id: new ObjectId(id) },
@@ -105,20 +110,6 @@ export class MongoCareSchedulesRepository implements CareSchedulesRepository {
             { returnDocument: 'after' }
         );
         return result ? this.toCareSchedule(result) : null;
-    }
-
-    async updateNextDue(id: string, nextDue: string): Promise<void> {
-        await this.collection.updateOne(
-            { _id: new ObjectId(id) },
-            { $set: { nextDue: new Date(nextDue), updatedAt: new Date() } }
-        );
-    }
-
-    async setActive(id: string, isActive: boolean): Promise<void> {
-        await this.collection.updateOne(
-            { _id: new ObjectId(id) },
-            { $set: { isActive, updatedAt: new Date() } }
-        );
     }
 
     async delete(id: string): Promise<boolean> {

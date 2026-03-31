@@ -1,6 +1,7 @@
 import { Static, Type } from 'typebox';
 import { FastifyPluginCallback } from 'fastify';
 import { PlantSchema } from '$domain/plant.js';
+import { OID } from './oid.js';
 import careSchedulesRoute from './care-schedules.js';
 import careLogsRoute from './care-logs.js';
 
@@ -13,7 +14,7 @@ const CreatePlantBody = Type.Object({
 });
 type CreatePlantBody = Static<typeof CreatePlantBody>;
 
-const PlantParams = Type.Object({ plantId: Type.String({ pattern: '^[0-9a-f]{24}$' }) });
+const PlantParams = Type.Object({ plantId: Type.String(OID) });
 type PlantParams = Static<typeof PlantParams>;
 
 const plantsRoute: FastifyPluginCallback = (fastify, _opts, done) => {
@@ -21,7 +22,7 @@ const plantsRoute: FastifyPluginCallback = (fastify, _opts, done) => {
         '/',
         { schema: { response: { 200: Type.Array(PlantSchema) } } },
         async (request) => {
-            return fastify.plantsService.getAll(request.user!.id);
+            return fastify.plantsRepository.findAll(request.user!.id);
         }
     );
 
@@ -29,7 +30,7 @@ const plantsRoute: FastifyPluginCallback = (fastify, _opts, done) => {
         '/:plantId',
         { schema: { params: PlantParams, response: { 200: PlantSchema } } },
         async (request, reply) => {
-            const plant = await fastify.plantsService.getById(request.params.plantId);
+            const plant = await fastify.plantsRepository.findById(request.params.plantId);
             if (!plant) return reply.status(404).send();
             return plant;
         }
@@ -40,7 +41,7 @@ const plantsRoute: FastifyPluginCallback = (fastify, _opts, done) => {
         { schema: { body: CreatePlantBody, response: { 201: PlantSchema } } },
         async (request, reply) => {
             const { name, description, photoUrl, acquiredAt, notes } = request.body;
-            const plant = await fastify.plantsService.create({
+            const plant = await fastify.plantsRepository.create({
                 userId: request.user!.id,
                 name,
                 description: description ?? null,

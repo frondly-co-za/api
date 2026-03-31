@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterAll, beforeEach } from 'vitest';
 import Fastify from 'fastify';
 import plantsRoute from '$infrastructure/http/routes/plants.js';
-import type { Plant } from '$domain/plant.js';
+import type { Plant, PlantsRepository } from '$domain/plant.js';
 import type { User } from '$domain/user.js';
 
 const testUser: User = {
@@ -15,27 +15,27 @@ const testUser: User = {
 };
 
 /**
- * Build a minimal Fastify app with the plants route and a mocked plantsService.
+ * Build a minimal Fastify app with the plants route and a mocked plantsRepository.
  * No DB or real plugins are loaded — we decorate directly before registering routes.
  * request.user is set via a preHandler, mirroring what the real auth plugin does.
  */
 function buildApp() {
     const app = Fastify({ logger: false });
 
-    const mockPlantsService = {
-        getAll: vi.fn<(userId: string) => Promise<Plant[]>>(),
-        getById: vi.fn<(id: string) => Promise<Plant | null>>(),
-        create: vi.fn<(data: object) => Promise<Plant>>(),
+    const mockPlantsRepository: PlantsRepository = {
+        findAll: vi.fn(),
+        findById: vi.fn(),
+        create: vi.fn(),
     };
 
     app.decorateRequest('user', null);
     app.addHook('preHandler', async (request) => {
         request.user = testUser;
     });
-    app.decorate('plantsService', mockPlantsService as never);
+    app.decorate('plantsRepository', mockPlantsRepository as never);
     app.register(plantsRoute, { prefix: '/plants' });
 
-    return { app, mockPlantsService };
+    return { app, mockPlantsRepository };
 }
 
 const plant: Plant = {
@@ -51,28 +51,28 @@ const plant: Plant = {
 };
 
 describe('GET /plants', () => {
-    const { app, mockPlantsService } = buildApp();
+    const { app, mockPlantsRepository } = buildApp();
     afterAll(() => app.close());
     beforeEach(() => vi.clearAllMocks());
 
     it('returns 200 with all plants for the authenticated user', async () => {
-        mockPlantsService.getAll.mockResolvedValue([plant]);
+        vi.mocked(mockPlantsRepository.findAll).mockResolvedValue([plant]);
 
         const res = await app.inject({ method: 'GET', url: '/plants' });
 
         expect(res.statusCode).toBe(200);
         expect(res.json()).toEqual([plant]);
-        expect(mockPlantsService.getAll).toHaveBeenCalledExactlyOnceWith(testUser.id);
+        expect(mockPlantsRepository.findAll).toHaveBeenCalledExactlyOnceWith(testUser.id);
     });
 });
 
 describe('GET /plants/:plantId', () => {
-    const { app, mockPlantsService } = buildApp();
+    const { app, mockPlantsRepository } = buildApp();
     afterAll(() => app.close());
     beforeEach(() => vi.clearAllMocks());
 
     it('returns 200 with the plant when found', async () => {
-        mockPlantsService.getById.mockResolvedValue(plant);
+        vi.mocked(mockPlantsRepository.findById).mockResolvedValue(plant);
 
         const res = await app.inject({ method: 'GET', url: '/plants/507f1f77bcf86cd799439011' });
 
@@ -81,7 +81,7 @@ describe('GET /plants/:plantId', () => {
     });
 
     it('returns 404 when no plant has that id', async () => {
-        mockPlantsService.getById.mockResolvedValue(null);
+        vi.mocked(mockPlantsRepository.findById).mockResolvedValue(null);
 
         const res = await app.inject({ method: 'GET', url: '/plants/507f1f77bcf86cd799439011' });
 
@@ -92,17 +92,17 @@ describe('GET /plants/:plantId', () => {
         const res = await app.inject({ method: 'GET', url: '/plants/not-a-valid-id' });
 
         expect(res.statusCode).toBe(400);
-        expect(mockPlantsService.getById).not.toHaveBeenCalled();
+        expect(mockPlantsRepository.findById).not.toHaveBeenCalled();
     });
 });
 
 describe('POST /plants', () => {
-    const { app, mockPlantsService } = buildApp();
+    const { app, mockPlantsRepository } = buildApp();
     afterAll(() => app.close());
     beforeEach(() => vi.clearAllMocks());
 
     it('returns 201 with the created plant and a Location header', async () => {
-        mockPlantsService.create.mockResolvedValue(plant);
+        vi.mocked(mockPlantsRepository.create).mockResolvedValue(plant);
 
         const res = await app.inject({
             method: 'POST',
@@ -123,6 +123,6 @@ describe('POST /plants', () => {
         });
 
         expect(res.statusCode).toBe(400);
-        expect(mockPlantsService.create).not.toHaveBeenCalled();
+        expect(mockPlantsRepository.create).not.toHaveBeenCalled();
     });
 });

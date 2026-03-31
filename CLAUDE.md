@@ -24,23 +24,25 @@ npm run format:check # Check formatting without writing
 
 The project follows **Clean Architecture** with three layers:
 
-- **`src/domain/`** — Domain models and entities (currently empty; add domain logic here)
-- **`src/application/`** — Use cases and business logic orchestration (currently empty)
+- **`src/domain/`** — Domain models and entities
+- **`src/application/`** — Services containing genuine business logic (orchestration across multiple repositories, computed fields, etc.)
 - **`src/infrastructure/`** — External concerns: HTTP server, databases, external APIs
   - `infrastructure/http/server.ts` — Fastify instance creation and route registration
   - `infrastructure/http/routes/` — Route plugins organized by domain entity
 
 **Entry point:** `src/index.ts` starts the Fastify server on `0.0.0.0:3000`.
 
-Routes are Fastify async plugins registered with a prefix (e.g., `/plants`). New route files should export a `FastifyPluginAsync` and be registered in `server.ts`.
+Routes are Fastify plugins registered with a prefix (e.g., `/plants`). Use `FastifyPluginAsync` when the plugin registration itself needs `await`; use `FastifyPluginCallback` with `done()` when it does not. All new route files should be registered in `server.ts`.
+
+Route handlers call repositories directly for simple CRUD operations. Services are created only when there is genuine business logic — decision-making, orchestration across multiple repositories, or logic that would be awkward to test at the HTTP layer. Services are never created purely for structural symmetry.
 
 ## Testing
 
 Test files live in `test/`, mirroring the `src/` structure with a `.test.ts` suffix. Each layer has a different mocking strategy:
 
-- **`test/infrastructure/http/routes/`** — Build a minimal Fastify app with `fastify.decorate()` to inject a mock service, then use `fastify.inject()` for HTTP-level assertions. No real DB or plugins loaded.
+- **`test/infrastructure/http/routes/`** — Build a minimal Fastify app with `fastify.decorate()` to inject a mock repository or service, then use `fastify.inject()` for HTTP-level assertions. No real DB or plugins loaded.
 - **`test/infrastructure/db/`** — Use `mongodb-memory-server` for a real in-process MongoDB instance. Start once per file in `beforeAll`, wipe the collection in `beforeEach`.
-- **`test/application/`** — Mock the `PlantsRepository` interface with `vi.fn()`. No DB or HTTP involved.
+- **`test/application/`** — Mock the repository interface with `vi.fn()`. No DB or HTTP involved.
 
 ## Code Style
 

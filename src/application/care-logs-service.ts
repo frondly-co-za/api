@@ -20,7 +20,7 @@ export class CareLogsService {
         let { careTypeId } = data;
 
         if (data.scheduleId) {
-            const schedule = await this.careSchedules.findById(data.scheduleId);
+            const schedule = await this.careSchedules.findById(data.plantId, data.scheduleId);
             if (!schedule) return null;
             careTypeId ??= schedule.careTypeId;
 
@@ -32,7 +32,7 @@ export class CareLogsService {
                 schedule.dayOfMonth,
                 schedule.months
             );
-            await this.careSchedules.updateNextDue(data.scheduleId, nextDue.toISOString());
+            await this.careSchedules.update(data.scheduleId, { nextDue: nextDue.toISOString() });
 
             return log;
         }

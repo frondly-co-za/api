@@ -1,8 +1,9 @@
 import { Static, Type } from 'typebox';
 import { FastifyPluginCallback } from 'fastify';
 import { CareTypeSchema } from '$domain/care-type.js';
+import { OID } from './oid.js';
 
-const IdParams = Type.Object({ typeId: Type.String({ pattern: '^[0-9a-f]{24}$' }) });
+const IdParams = Type.Object({ typeId: Type.String(OID) });
 type IdParams = Static<typeof IdParams>;
 
 const CreateCareTypeBody = Type.Object({
@@ -22,7 +23,7 @@ const careTypesRoute: FastifyPluginCallback = (fastify, _opts, done) => {
         '/',
         { schema: { response: { 200: Type.Array(CareTypeSchema) } } },
         async (request) => {
-            return fastify.careTypesService.getAll(request.user!.id);
+            return fastify.careTypesRepository.findAll(request.user!.id);
         }
     );
 
@@ -30,7 +31,7 @@ const careTypesRoute: FastifyPluginCallback = (fastify, _opts, done) => {
         '/:typeId',
         { schema: { params: IdParams, response: { 200: CareTypeSchema } } },
         async (request, reply) => {
-            const careType = await fastify.careTypesService.getById(request.params.typeId);
+            const careType = await fastify.careTypesRepository.findById(request.params.typeId);
             if (!careType) return reply.status(404).send();
             return careType;
         }
@@ -41,7 +42,7 @@ const careTypesRoute: FastifyPluginCallback = (fastify, _opts, done) => {
         { schema: { body: CreateCareTypeBody, response: { 201: CareTypeSchema } } },
         async (request, reply) => {
             const { name, options } = request.body;
-            const careType = await fastify.careTypesService.create({
+            const careType = await fastify.careTypesRepository.create({
                 userId: request.user!.id,
                 name,
                 options: options ?? []
@@ -63,7 +64,7 @@ const careTypesRoute: FastifyPluginCallback = (fastify, _opts, done) => {
             }
         },
         async (request, reply) => {
-            const careType = await fastify.careTypesService.update(
+            const careType = await fastify.careTypesRepository.update(
                 request.params.typeId,
                 request.body
             );
@@ -76,7 +77,7 @@ const careTypesRoute: FastifyPluginCallback = (fastify, _opts, done) => {
         '/:typeId',
         { schema: { params: IdParams } },
         async (request, reply) => {
-            const deleted = await fastify.careTypesService.delete(request.params.typeId);
+            const deleted = await fastify.careTypesRepository.delete(request.params.typeId);
             if (!deleted) return reply.status(404).send();
             return reply.status(204).send();
         }

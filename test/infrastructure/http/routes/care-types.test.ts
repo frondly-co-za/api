@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterAll, beforeEach } from 'vitest';
 import Fastify from 'fastify';
 import careTypesRoute from '$infrastructure/http/routes/care-types.js';
-import type { CareType } from '$domain/care-type.js';
+import type { CareType, CareTypesRepository } from '$domain/care-type.js';
 import type { User } from '$domain/user.js';
 
 const testUser: User = {
@@ -17,20 +17,20 @@ const testUser: User = {
 function buildApp() {
     const app = Fastify({ logger: false });
 
-    const mockCareTypesService = {
-        getAll: vi.fn<(userId: string) => Promise<CareType[]>>(),
-        getById: vi.fn<(id: string) => Promise<CareType | null>>(),
-        create: vi.fn<(data: object) => Promise<CareType>>(),
-        update: vi.fn<(id: string, data: object) => Promise<CareType | null>>(),
-        delete: vi.fn<(id: string) => Promise<boolean>>(),
+    const mockCareTypesRepository: CareTypesRepository = {
+        findAll: vi.fn(),
+        findById: vi.fn(),
+        create: vi.fn(),
+        update: vi.fn(),
+        delete: vi.fn(),
     };
 
     app.decorateRequest('user', null);
     app.addHook('preHandler', async (request) => { request.user = testUser; });
-    app.decorate('careTypesService', mockCareTypesService as never);
+    app.decorate('careTypesRepository', mockCareTypesRepository as never);
     app.register(careTypesRoute, { prefix: '/care-types' });
 
-    return { app, mockCareTypesService };
+    return { app, mockCareTypesRepository };
 }
 
 const careType: CareType = {
@@ -43,28 +43,28 @@ const careType: CareType = {
 };
 
 describe('GET /care-types', () => {
-    const { app, mockCareTypesService } = buildApp();
+    const { app, mockCareTypesRepository } = buildApp();
     afterAll(() => app.close());
     beforeEach(() => vi.clearAllMocks());
 
     it('returns 200 with all care types for the authenticated user', async () => {
-        mockCareTypesService.getAll.mockResolvedValue([careType]);
+        vi.mocked(mockCareTypesRepository.findAll).mockResolvedValue([careType]);
 
         const res = await app.inject({ method: 'GET', url: '/care-types' });
 
         expect(res.statusCode).toBe(200);
         expect(res.json()).toEqual([careType]);
-        expect(mockCareTypesService.getAll).toHaveBeenCalledExactlyOnceWith(testUser.id);
+        expect(mockCareTypesRepository.findAll).toHaveBeenCalledExactlyOnceWith(testUser.id);
     });
 });
 
 describe('GET /care-types/:typeId', () => {
-    const { app, mockCareTypesService } = buildApp();
+    const { app, mockCareTypesRepository } = buildApp();
     afterAll(() => app.close());
     beforeEach(() => vi.clearAllMocks());
 
     it('returns 200 with the care type when found', async () => {
-        mockCareTypesService.getById.mockResolvedValue(careType);
+        vi.mocked(mockCareTypesRepository.findById).mockResolvedValue(careType);
 
         const res = await app.inject({ method: 'GET', url: `/care-types/${careType.id}` });
 
@@ -73,7 +73,7 @@ describe('GET /care-types/:typeId', () => {
     });
 
     it('returns 404 when not found', async () => {
-        mockCareTypesService.getById.mockResolvedValue(null);
+        vi.mocked(mockCareTypesRepository.findById).mockResolvedValue(null);
 
         const res = await app.inject({ method: 'GET', url: `/care-types/${careType.id}` });
 
@@ -84,17 +84,17 @@ describe('GET /care-types/:typeId', () => {
         const res = await app.inject({ method: 'GET', url: '/care-types/not-valid' });
 
         expect(res.statusCode).toBe(400);
-        expect(mockCareTypesService.getById).not.toHaveBeenCalled();
+        expect(mockCareTypesRepository.findById).not.toHaveBeenCalled();
     });
 });
 
 describe('POST /care-types', () => {
-    const { app, mockCareTypesService } = buildApp();
+    const { app, mockCareTypesRepository } = buildApp();
     afterAll(() => app.close());
     beforeEach(() => vi.clearAllMocks());
 
     it('returns 201 with the created care type and a Location header', async () => {
-        mockCareTypesService.create.mockResolvedValue(careType);
+        vi.mocked(mockCareTypesRepository.create).mockResolvedValue(careType);
 
         const res = await app.inject({
             method: 'POST',
@@ -108,11 +108,11 @@ describe('POST /care-types', () => {
     });
 
     it('defaults options to [] when omitted', async () => {
-        mockCareTypesService.create.mockResolvedValue(careType);
+        vi.mocked(mockCareTypesRepository.create).mockResolvedValue(careType);
 
         await app.inject({ method: 'POST', url: '/care-types', payload: { name: 'Watering' } });
 
-        expect(mockCareTypesService.create).toHaveBeenCalledExactlyOnceWith(
+        expect(mockCareTypesRepository.create).toHaveBeenCalledExactlyOnceWith(
             expect.objectContaining({ options: [] })
         );
     });
@@ -121,18 +121,18 @@ describe('POST /care-types', () => {
         const res = await app.inject({ method: 'POST', url: '/care-types', payload: {} });
 
         expect(res.statusCode).toBe(400);
-        expect(mockCareTypesService.create).not.toHaveBeenCalled();
+        expect(mockCareTypesRepository.create).not.toHaveBeenCalled();
     });
 });
 
 describe('PATCH /care-types/:typeId', () => {
-    const { app, mockCareTypesService } = buildApp();
+    const { app, mockCareTypesRepository } = buildApp();
     afterAll(() => app.close());
     beforeEach(() => vi.clearAllMocks());
 
     it('returns 200 with the updated care type', async () => {
         const updated = { ...careType, name: 'Fertilising' };
-        mockCareTypesService.update.mockResolvedValue(updated);
+        vi.mocked(mockCareTypesRepository.update).mockResolvedValue(updated);
 
         const res = await app.inject({
             method: 'PATCH',
@@ -145,7 +145,7 @@ describe('PATCH /care-types/:typeId', () => {
     });
 
     it('returns 404 when not found', async () => {
-        mockCareTypesService.update.mockResolvedValue(null);
+        vi.mocked(mockCareTypesRepository.update).mockResolvedValue(null);
 
         const res = await app.inject({
             method: 'PATCH',
@@ -158,12 +158,12 @@ describe('PATCH /care-types/:typeId', () => {
 });
 
 describe('DELETE /care-types/:typeId', () => {
-    const { app, mockCareTypesService } = buildApp();
+    const { app, mockCareTypesRepository } = buildApp();
     afterAll(() => app.close());
     beforeEach(() => vi.clearAllMocks());
 
     it('returns 204 when deleted', async () => {
-        mockCareTypesService.delete.mockResolvedValue(true);
+        vi.mocked(mockCareTypesRepository.delete).mockResolvedValue(true);
 
         const res = await app.inject({ method: 'DELETE', url: `/care-types/${careType.id}` });
 
@@ -171,7 +171,7 @@ describe('DELETE /care-types/:typeId', () => {
     });
 
     it('returns 404 when not found', async () => {
-        mockCareTypesService.delete.mockResolvedValue(false);
+        vi.mocked(mockCareTypesRepository.delete).mockResolvedValue(false);
 
         const res = await app.inject({ method: 'DELETE', url: `/care-types/${careType.id}` });
 

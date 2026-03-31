@@ -14,8 +14,6 @@ const mockRepo: CareSchedulesRepository = {
     findById: vi.fn(),
     create: vi.fn(),
     update: vi.fn(),
-    updateNextDue: vi.fn(),
-    setActive: vi.fn(),
     delete: vi.fn(),
 };
 
@@ -56,13 +54,14 @@ describe('getById', () => {
     it('returns the schedule when found', async () => {
         vi.mocked(mockRepo.findById).mockResolvedValue(schedule);
 
-        expect(await service.getById(schedule.id)).toEqual(schedule);
+        expect(await service.getById(plantId, schedule.id)).toEqual(schedule);
+        expect(mockRepo.findById).toHaveBeenCalledExactlyOnceWith(plantId, schedule.id);
     });
 
     it('returns null when not found', async () => {
         vi.mocked(mockRepo.findById).mockResolvedValue(null);
 
-        expect(await service.getById(schedule.id)).toBeNull();
+        expect(await service.getById(plantId, schedule.id)).toBeNull();
     });
 });
 
@@ -93,7 +92,7 @@ describe('update', () => {
         vi.mocked(mockRepo.update).mockResolvedValue(null);
 
         expect(await service.update(schedule.id, { notes: 'updated' })).toBeNull();
-        expect(mockRepo.updateNextDue).not.toHaveBeenCalled();
+        expect(mockRepo.update).toHaveBeenCalledOnce();
     });
 
     it('does not recompute nextDue when recurrence fields are unchanged', async () => {
@@ -102,32 +101,20 @@ describe('update', () => {
         const result = await service.update(schedule.id, { notes: 'updated' });
 
         expect(computeNextDue).not.toHaveBeenCalled();
-        expect(mockRepo.updateNextDue).not.toHaveBeenCalled();
+        expect(mockRepo.update).toHaveBeenCalledOnce();
         expect(result).toEqual(schedule);
     });
 
     it('recomputes and persists nextDue when recurrence fields change', async () => {
         vi.mocked(mockRepo.update).mockResolvedValue(schedule);
-        vi.mocked(mockRepo.updateNextDue).mockResolvedValue();
 
-        const result = await service.update(schedule.id, { dayOfWeek: [5] });
+        await service.update(schedule.id, { dayOfWeek: [5] });
 
         expect(computeNextDue).toHaveBeenCalledOnce();
-        expect(mockRepo.updateNextDue).toHaveBeenCalledExactlyOnceWith(
-            schedule.id,
-            '2026-04-01T00:00:00.000Z'
-        );
-        expect(result).toEqual({ ...schedule, nextDue: '2026-04-01T00:00:00.000Z' });
-    });
-});
-
-describe('setActive', () => {
-    it('delegates to repo.setActive', async () => {
-        vi.mocked(mockRepo.setActive).mockResolvedValue();
-
-        await service.setActive(schedule.id, false);
-
-        expect(mockRepo.setActive).toHaveBeenCalledExactlyOnceWith(schedule.id, false);
+        expect(mockRepo.update).toHaveBeenCalledTimes(2);
+        expect(mockRepo.update).toHaveBeenLastCalledWith(schedule.id, {
+            nextDue: '2026-04-01T00:00:00.000Z'
+        });
     });
 });
 

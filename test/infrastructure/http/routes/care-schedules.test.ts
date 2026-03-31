@@ -23,12 +23,11 @@ function buildApp() {
 
     const mockCareSchedulesService = {
         getByPlantId: vi.fn<(plantId: string) => Promise<CareSchedule[]>>(),
-        getById: vi.fn<(id: string) => Promise<CareSchedule | null>>(),
+        getById: vi.fn<(plantId: string, id: string) => Promise<CareSchedule | null>>(),
         create: vi.fn<(data: object) => Promise<CareSchedule>>(),
         update: vi.fn<(id: string, data: object) => Promise<CareSchedule | null>>(),
         delete: vi.fn<(id: string) => Promise<boolean>>(),
         getDue: vi.fn(),
-        setActive: vi.fn(),
     };
 
     const mockCareLogsService = {
@@ -92,6 +91,10 @@ describe('GET /plants/:plantId/schedules/:scheduleId', () => {
 
         expect(res.statusCode).toBe(200);
         expect(res.json()).toEqual(schedule);
+        expect(mockCareSchedulesService.getById).toHaveBeenCalledExactlyOnceWith(
+            plantId,
+            schedule.id
+        );
     });
 
     it('returns 404 when not found', async () => {

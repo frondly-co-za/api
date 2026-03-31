@@ -46,15 +46,15 @@ export interface UpdateCareScheduleData {
     dayOfWeek?: number[];
     dayOfMonth?: number[];
     months?: number[];
+    isActive?: boolean;
+    nextDue?: string; // computed by service; not exposed in route body schema
 }
 
 export interface CareSchedulesRepository {
     findByPlantId(plantId: string): Promise<CareSchedule[]>;
     findDue(userId: string, asOf: string): Promise<CareSchedule[]>; // nextDue <= asOf
-    findById(id: string): Promise<CareSchedule | null>;
+    findById(plantId: string, id: string): Promise<CareSchedule | null>;
     create(data: CreateCareScheduleData): Promise<CareSchedule>;
     update(id: string, data: UpdateCareScheduleData): Promise<CareSchedule | null>;
-    updateNextDue(id: string, nextDue: string): Promise<void>;
-    setActive(id: string, isActive: boolean): Promise<void>;
     delete(id: string): Promise<boolean>;
 }

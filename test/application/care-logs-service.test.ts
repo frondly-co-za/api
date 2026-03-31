@@ -22,8 +22,6 @@ const mockSchedulesRepo: CareSchedulesRepository = {
     findById: vi.fn(),
     create: vi.fn(),
     update: vi.fn(),
-    updateNextDue: vi.fn(),
-    setActive: vi.fn(),
     delete: vi.fn(),
 };
 
@@ -106,7 +104,7 @@ describe('create (ad-hoc)', () => {
 
         expect(result).toEqual(log);
         expect(mockSchedulesRepo.findById).not.toHaveBeenCalled();
-        expect(mockSchedulesRepo.updateNextDue).not.toHaveBeenCalled();
+        expect(mockSchedulesRepo.update).not.toHaveBeenCalled();
         expect(mockLogsRepo.create).toHaveBeenCalledExactlyOnceWith(
             expect.objectContaining({ careTypeId, scheduleId: null })
         );
@@ -118,7 +116,7 @@ describe('create (scheduled)', () => {
         const scheduledLog = { ...log, scheduleId };
         vi.mocked(mockSchedulesRepo.findById).mockResolvedValue(schedule);
         vi.mocked(mockLogsRepo.create).mockResolvedValue(scheduledLog);
-        vi.mocked(mockSchedulesRepo.updateNextDue).mockResolvedValue();
+        vi.mocked(mockSchedulesRepo.update).mockResolvedValue(schedule);
 
         const result = await service.create({
             userId,
@@ -135,17 +133,16 @@ describe('create (scheduled)', () => {
             expect.objectContaining({ careTypeId, scheduleId })
         );
         expect(computeNextDue).toHaveBeenCalledOnce();
-        expect(mockSchedulesRepo.updateNextDue).toHaveBeenCalledExactlyOnceWith(
-            scheduleId,
-            '2026-04-07T00:00:00.000Z'
-        );
+        expect(mockSchedulesRepo.update).toHaveBeenCalledExactlyOnceWith(scheduleId, {
+            nextDue: '2026-04-07T00:00:00.000Z'
+        });
     });
 
     it('uses the provided careTypeId even when scheduleId is set', async () => {
         const overriddenTypeId = '507f1f77bcf86cd799439099';
         vi.mocked(mockSchedulesRepo.findById).mockResolvedValue(schedule);
         vi.mocked(mockLogsRepo.create).mockResolvedValue(log);
-        vi.mocked(mockSchedulesRepo.updateNextDue).mockResolvedValue();
+        vi.mocked(mockSchedulesRepo.update).mockResolvedValue(schedule);
 
         await service.create({
             userId,

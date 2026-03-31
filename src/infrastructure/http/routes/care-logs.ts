@@ -1,15 +1,7 @@
 import { Static, Type } from 'typebox';
 import { FastifyPluginCallback } from 'fastify';
 import { CareLogSchema } from '$domain/care-log.js';
-
-const OID = { pattern: '^[0-9a-f]{24}$' };
-
-// plantId (and optionally scheduleId) always come from parent prefixes.
-// Only /:logId belongs to this plugin's own path segments.
-type ListParams = { plantId: string; scheduleId?: string };
-type ItemParams = { plantId: string; scheduleId?: string; logId: string };
-
-const LogIdParams = Type.Object({ logId: Type.String(OID) });
+import { OID } from './oid.js';
 
 const SharedLogFields = {
     selectedOption: Type.Optional(Type.Union([Type.String(), Type.Null()])),
@@ -33,18 +25,30 @@ export interface CareLogsOptions {
 }
 
 const careLogsRoute: FastifyPluginCallback<CareLogsOptions> = (fastify, opts, done) => {
-    fastify.get(
+    // Param schemas vary by context — scheduleId is only present in the scheduled context
+    const listParams = opts.scheduleContext
+        ? Type.Object({ plantId: Type.String(OID), scheduleId: Type.String(OID) })
+        : Type.Object({ plantId: Type.String(OID) });
+
+    const itemParams = opts.scheduleContext
+        ? Type.Object({ plantId: Type.String(OID), scheduleId: Type.String(OID), logId: Type.String(OID) })
+        : Type.Object({ plantId: Type.String(OID), logId: Type.String(OID) });
+
+    type ListParams = { plantId: string; scheduleId?: string };
+    type ItemParams = { plantId: string; scheduleId?: string; logId: string };
+
+    fastify.get<{ Params: ListParams }>(
         '/',
-        { schema: { response: { 200: Type.Array(CareLogSchema) } } },
+        { schema: { params: listParams, response: { 200: Type.Array(CareLogSchema) } } },
         async (request) => {
-            const { plantId, scheduleId } = request.params as ListParams;
+            const { plantId, scheduleId } = request.params;
             return fastify.careLogsService.getByPlantId(plantId, scheduleId);
         }
     );
 
     fastify.get<{ Params: ItemParams }>(
         '/:logId',
-        { schema: { params: LogIdParams, response: { 200: CareLogSchema } } },
+        { schema: { params: itemParams, response: { 200: CareLogSchema } } },
         async (request, reply) => {
             const log = await fastify.careLogsService.getById(
                 request.params.plantId,
@@ -56,11 +60,11 @@ const careLogsRoute: FastifyPluginCallback<CareLogsOptions> = (fastify, opts, do
     );
 
     if (opts.scheduleContext) {
-        fastify.post<{ Body: ScheduledLogBody }>(
+        fastify.post<{ Body: ScheduledLogBody; Params: ListParams }>(
             '/',
-            { schema: { body: ScheduledLogBody, response: { 201: CareLogSchema } } },
+            { schema: { params: listParams, body: ScheduledLogBody, response: { 201: CareLogSchema } } },
             async (request, reply) => {
-                const { plantId, scheduleId } = request.params as ListParams;
+                const { plantId, scheduleId } = request.params;
                 const { careTypeId, selectedOption, notes, performedAt } = request.body;
                 const log = await fastify.careLogsService.create({
                     userId: request.user!.id,
@@ -77,11 +81,11 @@ const careLogsRoute: FastifyPluginCallback<CareLogsOptions> = (fastify, opts, do
             }
         );
     } else {
-        fastify.post<{ Body: AdHocLogBody }>(
+        fastify.post<{ Body: AdHocLogBody; Params: ListParams }>(
             '/',
-            { schema: { body: AdHocLogBody, response: { 201: CareLogSchema } } },
+            { schema: { params: listParams, body: AdHocLogBody, response: { 201: CareLogSchema } } },
             async (request, reply) => {
-                const { plantId } = request.params as ListParams;
+                const { plantId } = request.params;
                 const { careTypeId, selectedOption, notes, performedAt } = request.body;
                 const log = await fastify.careLogsService.create({
                     userId: request.user!.id,
@@ -100,7 +104,7 @@ const careLogsRoute: FastifyPluginCallback<CareLogsOptions> = (fastify, opts, do
 
     fastify.delete<{ Params: ItemParams }>(
         '/:logId',
-        { schema: { params: LogIdParams } },
+        { schema: { params: itemParams } },
         async (request, reply) => {
             const deleted = await fastify.careLogsService.delete(
                 request.params.plantId,

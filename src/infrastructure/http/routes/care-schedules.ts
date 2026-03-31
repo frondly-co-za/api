@@ -1,15 +1,17 @@
 import { Static, Type } from 'typebox';
 import { FastifyPluginCallback } from 'fastify';
 import { CareScheduleSchema } from '$domain/care-schedule.js';
+import { OID } from './oid.js';
 import careLogsRoute from './care-logs.js';
 
-const OID = { pattern: '^[0-9a-f]{24}$' };
+const PlantParams = Type.Object({ plantId: Type.String(OID) });
+type PlantParams = Static<typeof PlantParams>;
 
-// plantId comes from the parent prefix; only /:scheduleId belongs to this plugin's own paths.
-type PlantParams = { plantId: string };
-type ScheduleParams = { plantId: string; scheduleId: string };
-
-const ScheduleIdParams = Type.Object({ scheduleId: Type.String(OID) });
+const PlantScheduleParams = Type.Object({
+    plantId: Type.String(OID),
+    scheduleId: Type.String(OID)
+});
+type PlantScheduleParams = Static<typeof PlantScheduleParams>;
 
 const RecurrenceFields = {
     dayOfWeek: Type.Optional(Type.Array(Type.Integer({ minimum: 0, maximum: 6 }))),
@@ -29,35 +31,36 @@ const UpdateScheduleBody = Type.Object({
     careTypeId: Type.Optional(Type.String(OID)),
     selectedOption: Type.Optional(Type.Union([Type.String(), Type.Null()])),
     notes: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+    isActive: Type.Optional(Type.Boolean()),
     ...RecurrenceFields
 });
 type UpdateScheduleBody = Static<typeof UpdateScheduleBody>;
 
 const careSchedulesRoute: FastifyPluginCallback = (fastify, _opts, done) => {
-    fastify.get(
+    fastify.get<{ Params: PlantParams }>(
         '/',
-        { schema: { response: { 200: Type.Array(CareScheduleSchema) } } },
+        { schema: { params: PlantParams, response: { 200: Type.Array(CareScheduleSchema) } } },
         async (request) => {
-            const { plantId } = request.params as PlantParams;
-            return fastify.careSchedulesService.getByPlantId(plantId);
+            return fastify.careSchedulesService.getByPlantId(request.params.plantId);
         }
     );
 
-    fastify.get<{ Params: ScheduleParams }>(
+    fastify.get<{ Params: PlantScheduleParams }>(
         '/:scheduleId',
-        { schema: { params: ScheduleIdParams, response: { 200: CareScheduleSchema } } },
+        { schema: { params: PlantScheduleParams, response: { 200: CareScheduleSchema } } },
         async (request, reply) => {
-            const schedule = await fastify.careSchedulesService.getById(request.params.scheduleId);
+            const { plantId, scheduleId } = request.params;
+            const schedule = await fastify.careSchedulesService.getById(plantId, scheduleId);
             if (!schedule) return reply.status(404).send();
             return schedule;
         }
     );
 
-    fastify.post<{ Body: CreateScheduleBody }>(
+    fastify.post<{ Params: PlantParams; Body: CreateScheduleBody }>(
         '/',
-        { schema: { body: CreateScheduleBody, response: { 201: CareScheduleSchema } } },
+        { schema: { params: PlantParams, body: CreateScheduleBody, response: { 201: CareScheduleSchema } } },
         async (request, reply) => {
-            const { plantId } = request.params as PlantParams;
+            const { plantId } = request.params;
             const { careTypeId, selectedOption, notes, dayOfWeek, dayOfMonth, months } =
                 request.body;
             const schedule = await fastify.careSchedulesService.create({
@@ -75,11 +78,11 @@ const careSchedulesRoute: FastifyPluginCallback = (fastify, _opts, done) => {
         }
     );
 
-    fastify.patch<{ Params: ScheduleParams; Body: UpdateScheduleBody }>(
+    fastify.patch<{ Params: PlantScheduleParams; Body: UpdateScheduleBody }>(
         '/:scheduleId',
         {
             schema: {
-                params: ScheduleIdParams,
+                params: PlantScheduleParams,
                 body: UpdateScheduleBody,
                 response: { 200: CareScheduleSchema }
             }
@@ -94,9 +97,9 @@ const careSchedulesRoute: FastifyPluginCallback = (fastify, _opts, done) => {
         }
     );
 
-    fastify.delete<{ Params: ScheduleParams }>(
+    fastify.delete<{ Params: PlantScheduleParams }>(
         '/:scheduleId',
-        { schema: { params: ScheduleIdParams } },
+        { schema: { params: PlantScheduleParams } },
         async (request, reply) => {
             const deleted = await fastify.careSchedulesService.delete(request.params.scheduleId);
             if (!deleted) return reply.status(404).send();

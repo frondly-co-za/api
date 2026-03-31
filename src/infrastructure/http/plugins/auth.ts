@@ -9,7 +9,7 @@ declare module 'fastify' {
     }
 }
 
-const authPlugin: FastifyPluginCallback = (fastify) => {
+const authPlugin: FastifyPluginCallback = (fastify, _opts, done) => {
     fastify.decorateRequest('user', null);
 
     fastify.addHook('onRequest', async (request, reply) => {
@@ -29,7 +29,7 @@ const authPlugin: FastifyPluginCallback = (fastify) => {
 
         try {
             const payload = await verifyJwt(token);
-            request.user = await fastify.usersService.upsert({
+            request.user = await fastify.usersRepository.upsert({
                 auth0Sub: payload.sub,
                 email: payload.email ?? '',
                 name: payload.name ?? '',
@@ -41,6 +41,8 @@ const authPlugin: FastifyPluginCallback = (fastify) => {
                 .send({ statusCode: 401, error: 'Unauthorized', message: 'Invalid token' });
         }
     });
+
+    done();
 };
 
 export default fastifyPlugin(authPlugin);
