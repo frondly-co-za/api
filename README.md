@@ -6,10 +6,14 @@ Built with [Fastify](https://fastify.dev) and [MongoDB](https://www.mongodb.com)
 
 ## Getting started
 
-Copy `.env.example` to `.env` and set your MongoDB connection string:
+Copy `.env.example` to `.env` and fill in the values:
 
 ```
 MONGODB_URI=mongodb://user:password@localhost:27017/frondly-dev
+
+# Auth0 application settings (Machine to Machine or API)
+AUTH0_DOMAIN=your-tenant.eu.auth0.com
+AUTH0_AUDIENCE=https://api.frondly.co.za
 ```
 
 Install dependencies and start the development server:
