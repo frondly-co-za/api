@@ -14,14 +14,15 @@ export const PhotoSchema = Type.Object({
 
 export type Photo = Static<typeof PhotoSchema>;
 
-export interface CreatePhotoData {
-    id: string;
-    userId: string;
-    plantId: string;
-    uri: string;
-    takenAt: string | null;
-    originalFilename: string | null;
-}
+export const CreatePhotoDataSchema = Type.Object({
+    id: Type.String(),
+    userId: Type.String(),
+    plantId: Type.String(),
+    uri: Type.String(),
+    takenAt: Type.Union([Type.String({ format: 'date-time' }), Type.Null()]),
+    originalFilename: Type.Union([Type.String(), Type.Null()])
+});
+export type CreatePhotoData = Static<typeof CreatePhotoDataSchema>;
 
 export interface UploadToPlantData {
     userId: string;

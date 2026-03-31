@@ -1,22 +1,21 @@
 import { Static, Type } from 'typebox';
 import { FastifyPluginCallback } from 'fastify';
-import { CareTypeSchema } from '$domain/care-type.js';
+import {
+    CareTypeSchema,
+    CreateCareTypeDataSchema,
+    UpdateCareTypeDataSchema
+} from '$domain/care-type.js';
 import { OID } from './oid.js';
 
 const IdParams = Type.Object({ typeId: Type.String(OID) });
 type IdParams = Static<typeof IdParams>;
 
-const CreateCareTypeBody = Type.Object({
-    name: Type.String(),
-    options: Type.Optional(Type.Array(Type.String()))
-});
-type CreateCareTypeBody = Static<typeof CreateCareTypeBody>;
-
-const UpdateCareTypeBody = Type.Object({
-    name: Type.Optional(Type.String()),
-    options: Type.Optional(Type.Array(Type.String()))
-});
+const UpdateCareTypeBody = UpdateCareTypeDataSchema;
 type UpdateCareTypeBody = Static<typeof UpdateCareTypeBody>;
+
+const { name, options } = CreateCareTypeDataSchema.properties;
+const CreateCareTypeBody = Type.Object({ name, options: Type.Optional(options) });
+type CreateCareTypeBody = Static<typeof CreateCareTypeBody>;
 
 const careTypesRoutes: FastifyPluginCallback = (fastify, _opts, done) => {
     fastify.get(

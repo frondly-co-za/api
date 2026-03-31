@@ -1,24 +1,21 @@
 import { Static, Type } from 'typebox';
 import { FastifyPluginCallback } from 'fastify';
-import { PlantSchema } from '$domain/plant.js';
+import { PlantSchema, CreatePlantDataSchema, UpdatePlantDataSchema } from '$domain/plant.js';
 import { OID } from './oid.js';
 import careSchedulesRoutes from './care-schedules.js';
 import careLogsRoutes from './care-logs.js';
 import photosRoutes from './photos.js';
 
-const UpdatePlantBody = Type.Object({
-    name: Type.Optional(Type.String()),
-    description: Type.Optional(Type.Union([Type.String(), Type.Null()])),
-    acquiredAt: Type.Optional(Type.Union([Type.String({ format: 'date-time' }), Type.Null()])),
-    notes: Type.Optional(Type.Union([Type.String(), Type.Null()]))
-});
+// coverPhotoId is set via the dedicated /cover endpoint, not in a general update
+const UpdatePlantBody = Type.Omit(UpdatePlantDataSchema, ['coverPhotoId']);
 type UpdatePlantBody = Static<typeof UpdatePlantBody>;
 
+const { name, description, acquiredAt, notes } = CreatePlantDataSchema.properties;
 const CreatePlantBody = Type.Object({
-    name: Type.String(),
-    description: Type.Optional(Type.Union([Type.String(), Type.Null()])),
-    acquiredAt: Type.Optional(Type.Union([Type.String({ format: 'date-time' }), Type.Null()])),
-    notes: Type.Optional(Type.Union([Type.String(), Type.Null()]))
+    name,
+    description: Type.Optional(description),
+    acquiredAt: Type.Optional(acquiredAt),
+    notes: Type.Optional(notes)
 });
 type CreatePlantBody = Static<typeof CreatePlantBody>;
 

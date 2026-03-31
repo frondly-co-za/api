@@ -14,21 +14,23 @@ export const PlantSchema = Type.Object({
 
 export type Plant = Static<typeof PlantSchema>;
 
-export interface CreatePlantData {
-    userId: string;
-    name: string;
-    description: string | null;
-    acquiredAt: string | null;
-    notes: string | null;
-}
+export const CreatePlantDataSchema = Type.Object({
+    userId: Type.String(),
+    name: Type.String(),
+    description: Type.Union([Type.String(), Type.Null()]),
+    acquiredAt: Type.Union([Type.String({ format: 'date-time' }), Type.Null()]),
+    notes: Type.Union([Type.String(), Type.Null()])
+});
+export type CreatePlantData = Static<typeof CreatePlantDataSchema>;
 
-export interface UpdatePlantData {
-    name?: string;
-    description?: string | null;
-    coverPhotoId?: string | null;
-    acquiredAt?: string | null;
-    notes?: string | null;
-}
+export const UpdatePlantDataSchema = Type.Object({
+    name: Type.Optional(Type.String()),
+    description: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+    coverPhotoId: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+    acquiredAt: Type.Optional(Type.Union([Type.String({ format: 'date-time' }), Type.Null()])),
+    notes: Type.Optional(Type.Union([Type.String(), Type.Null()]))
+});
+export type UpdatePlantData = Static<typeof UpdatePlantDataSchema>;
 
 export interface PlantsRepository {
     findAll(userId: string): Promise<Plant[]>;

@@ -1,6 +1,10 @@
 import { Static, Type } from 'typebox';
 import { FastifyPluginCallback } from 'fastify';
-import { CareScheduleSchema } from '$domain/care-schedule.js';
+import {
+    CareScheduleSchema,
+    CreateCareScheduleDataSchema,
+    UpdateCareScheduleDataSchema
+} from '$domain/care-schedule.js';
 import { OID } from './oid.js';
 
 const PlantParams = Type.Object({ plantId: Type.String(OID) });
@@ -12,28 +16,24 @@ const PlantScheduleParams = Type.Object({
 });
 type PlantScheduleParams = Static<typeof PlantScheduleParams>;
 
-const RecurrenceFields = {
-    dayOfWeek: Type.Optional(Type.Array(Type.Integer({ minimum: 0, maximum: 6 }))),
-    dayOfMonth: Type.Optional(Type.Array(Type.Integer({ minimum: 1, maximum: 31 }))),
-    months: Type.Optional(Type.Array(Type.Integer({ minimum: 1, maximum: 12 })))
-};
-
-const CreateScheduleBody = Type.Object({
-    careTypeId: Type.String(OID),
-    selectedOption: Type.Optional(Type.Union([Type.String(), Type.Null()])),
-    notes: Type.Optional(Type.Union([Type.String(), Type.Null()])),
-    ...RecurrenceFields
-});
-type CreateScheduleBody = Static<typeof CreateScheduleBody>;
-
+// nextDue is computed by the service; careTypeId is re-added with OID constraint
 const UpdateScheduleBody = Type.Object({
-    careTypeId: Type.Optional(Type.String(OID)),
-    selectedOption: Type.Optional(Type.Union([Type.String(), Type.Null()])),
-    notes: Type.Optional(Type.Union([Type.String(), Type.Null()])),
-    isActive: Type.Optional(Type.Boolean()),
-    ...RecurrenceFields
+    ...Type.Omit(UpdateCareScheduleDataSchema, ['nextDue', 'careTypeId']).properties,
+    careTypeId: Type.Optional(Type.String(OID))
 });
 type UpdateScheduleBody = Static<typeof UpdateScheduleBody>;
+
+const { selectedOption, notes, dayOfWeek, dayOfMonth, months } =
+    CreateCareScheduleDataSchema.properties;
+const CreateScheduleBody = Type.Object({
+    careTypeId: Type.String(OID),
+    selectedOption: Type.Optional(selectedOption),
+    notes: Type.Optional(notes),
+    dayOfWeek: Type.Optional(dayOfWeek),
+    dayOfMonth: Type.Optional(dayOfMonth),
+    months: Type.Optional(months)
+});
+type CreateScheduleBody = Static<typeof CreateScheduleBody>;
 
 const careSchedulesRoutes: FastifyPluginCallback = (fastify, _opts, done) => {
     fastify.get<{ Params: PlantParams }>(

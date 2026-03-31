@@ -27,28 +27,31 @@ export const CareScheduleSchema = Type.Object({
 
 export type CareSchedule = Static<typeof CareScheduleSchema>;
 
-export interface CreateCareScheduleData {
-    userId: string;
-    plantId: string;
-    careTypeId: string;
-    selectedOption: string | null;
-    notes: string | null;
-    dayOfWeek: number[];
-    dayOfMonth: number[];
-    months: number[];
-    nextDue: string;
-}
+export const CreateCareScheduleDataSchema = Type.Object({
+    userId: Type.String(),
+    plantId: Type.String(),
+    careTypeId: Type.String(),
+    selectedOption: Type.Union([Type.String(), Type.Null()]),
+    notes: Type.Union([Type.String(), Type.Null()]),
+    // Empty array means "match any" for that dimension
+    dayOfWeek: Type.Array(Type.Integer({ minimum: 0, maximum: 6 })),
+    dayOfMonth: Type.Array(Type.Integer({ minimum: 1, maximum: 31 })),
+    months: Type.Array(Type.Integer({ minimum: 1, maximum: 12 })),
+    nextDue: Type.String({ format: 'date-time' }) // computed by service; not exposed in route body
+});
+export type CreateCareScheduleData = Static<typeof CreateCareScheduleDataSchema>;
 
-export interface UpdateCareScheduleData {
-    careTypeId?: string;
-    selectedOption?: string | null;
-    notes?: string | null;
-    dayOfWeek?: number[];
-    dayOfMonth?: number[];
-    months?: number[];
-    isActive?: boolean;
-    nextDue?: string; // computed by service; not exposed in route body schema
-}
+export const UpdateCareScheduleDataSchema = Type.Object({
+    careTypeId: Type.Optional(Type.String()),
+    selectedOption: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+    notes: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+    dayOfWeek: Type.Optional(Type.Array(Type.Integer({ minimum: 0, maximum: 6 }))),
+    dayOfMonth: Type.Optional(Type.Array(Type.Integer({ minimum: 1, maximum: 31 }))),
+    months: Type.Optional(Type.Array(Type.Integer({ minimum: 1, maximum: 12 }))),
+    isActive: Type.Optional(Type.Boolean()),
+    nextDue: Type.Optional(Type.String({ format: 'date-time' })) // computed by service; not exposed in route body
+});
+export type UpdateCareScheduleData = Static<typeof UpdateCareScheduleDataSchema>;
 
 export interface CareSchedulesRepository {
     findByPlantId(userId: string, plantId: string): Promise<CareSchedule[]>;

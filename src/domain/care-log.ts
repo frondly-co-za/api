@@ -14,15 +14,16 @@ export const CareLogSchema = Type.Object({
 
 export type CareLog = Static<typeof CareLogSchema>;
 
-export interface CreateCareLogData {
-    userId: string;
-    plantId: string;
-    scheduleId: string | null;
-    careTypeId: string;
-    selectedOption: string | null;
-    notes: string | null;
-    performedAt: string;
-}
+export const CreateCareLogDataSchema = Type.Object({
+    userId: Type.String(),
+    plantId: Type.String(),
+    scheduleId: Type.Union([Type.String(), Type.Null()]),
+    careTypeId: Type.String(),
+    selectedOption: Type.Union([Type.String(), Type.Null()]),
+    notes: Type.Union([Type.String(), Type.Null()]),
+    performedAt: Type.String({ format: 'date-time' })
+});
+export type CreateCareLogData = Static<typeof CreateCareLogDataSchema>;
 
 export interface CareLogsRepository {
     findByPlantId(userId: string, plantId: string): Promise<CareLog[]>;

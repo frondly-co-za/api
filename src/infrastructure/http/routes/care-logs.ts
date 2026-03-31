@@ -1,14 +1,16 @@
 import { Static, Type } from 'typebox';
 import { FastifyPluginCallback } from 'fastify';
-import { CareLogSchema } from '$domain/care-log.js';
+import { CareLogSchema, CreateCareLogDataSchema } from '$domain/care-log.js';
 import { OID } from './oid.js';
 
+// careTypeId and scheduleId need OID constraints; scheduleId changes from string|null to optional string
+const { selectedOption, notes, performedAt } = CreateCareLogDataSchema.properties;
 const LogBody = Type.Object({
     careTypeId: Type.String(OID),
     scheduleId: Type.Optional(Type.String(OID)),
-    selectedOption: Type.Optional(Type.Union([Type.String(), Type.Null()])),
-    notes: Type.Optional(Type.Union([Type.String(), Type.Null()])),
-    performedAt: Type.Optional(Type.String({ format: 'date-time' }))
+    selectedOption: Type.Optional(selectedOption),
+    notes: Type.Optional(notes),
+    performedAt: Type.Optional(performedAt)
 });
 type LogBody = Static<typeof LogBody>;
 

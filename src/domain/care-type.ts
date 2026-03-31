@@ -11,16 +11,18 @@ export const CareTypeSchema = Type.Object({
 
 export type CareType = Static<typeof CareTypeSchema>;
 
-export interface CreateCareTypeData {
-    userId: string;
-    name: string;
-    options: string[];
-}
+export const CreateCareTypeDataSchema = Type.Object({
+    userId: Type.String(),
+    name: Type.String(),
+    options: Type.Array(Type.String())
+});
+export type CreateCareTypeData = Static<typeof CreateCareTypeDataSchema>;
 
-export interface UpdateCareTypeData {
-    name?: string;
-    options?: string[];
-}
+export const UpdateCareTypeDataSchema = Type.Object({
+    name: Type.Optional(Type.String()),
+    options: Type.Optional(Type.Array(Type.String()))
+});
+export type UpdateCareTypeData = Static<typeof UpdateCareTypeDataSchema>;
 
 export interface CareTypesRepository {
     findAll(userId: string): Promise<CareType[]>; // returns system defaults + user's own
