@@ -4,6 +4,7 @@ import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
 import plantsRoutes from './routes/plants.js';
 import careTypesRoutes from './routes/care-types.js';
+import schedulesRoutes from './routes/schedules.js';
 import dbConnector from './plugins/db-connector.js';
 import services from './plugins/services.js';
 import auth from './plugins/auth.js';
@@ -33,6 +34,7 @@ fastify.register((authenticatedRoutes, _opts, done) => {
     authenticatedRoutes.register(auth);
     authenticatedRoutes.register(plantsRoutes, { prefix: '/plants' });
     authenticatedRoutes.register(careTypesRoutes, { prefix: '/care-types' });
+    authenticatedRoutes.register(schedulesRoutes, { prefix: '/schedules' });
     done();
 });
 

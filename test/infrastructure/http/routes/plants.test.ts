@@ -26,6 +26,8 @@ function buildApp() {
         findAll: vi.fn<(userId: string) => Promise<Plant[]>>(),
         findById: vi.fn<(userId: string, id: string) => Promise<Plant | null>>(),
         create: vi.fn(),
+        update: vi.fn(),
+        delete: vi.fn(),
     };
 
     app.decorateRequest('user', null);
@@ -93,6 +95,75 @@ describe('GET /plants/:plantId', () => {
 
         expect(res.statusCode).toBe(400);
         expect(mockPlantsRepository.findById).not.toHaveBeenCalled();
+    });
+});
+
+describe('PATCH /plants/:plantId', () => {
+    const { app, mockPlantsRepository } = buildApp();
+    afterAll(() => app.close());
+    beforeEach(() => vi.clearAllMocks());
+
+    it('returns 200 with the updated plant', async () => {
+        const updated = { ...plant, name: 'Updated Cactus' };
+        vi.mocked(mockPlantsRepository.update).mockResolvedValue(updated);
+
+        const res = await app.inject({
+            method: 'PATCH',
+            url: '/plants/507f1f77bcf86cd799439011',
+            payload: { name: 'Updated Cactus' },
+        });
+
+        expect(res.statusCode).toBe(200);
+        expect(res.json()).toEqual(updated);
+        expect(mockPlantsRepository.update).toHaveBeenCalledExactlyOnceWith(
+            testUser.id,
+            '507f1f77bcf86cd799439011',
+            { name: 'Updated Cactus' }
+        );
+    });
+
+    it('returns 404 when no plant has that id', async () => {
+        vi.mocked(mockPlantsRepository.update).mockResolvedValue(null);
+
+        const res = await app.inject({
+            method: 'PATCH',
+            url: '/plants/507f1f77bcf86cd799439011',
+            payload: { name: 'Updated Cactus' },
+        });
+
+        expect(res.statusCode).toBe(404);
+    });
+});
+
+describe('DELETE /plants/:plantId', () => {
+    const { app, mockPlantsRepository } = buildApp();
+    afterAll(() => app.close());
+    beforeEach(() => vi.clearAllMocks());
+
+    it('returns 204 when the plant is deleted', async () => {
+        vi.mocked(mockPlantsRepository.delete).mockResolvedValue(true);
+
+        const res = await app.inject({
+            method: 'DELETE',
+            url: '/plants/507f1f77bcf86cd799439011',
+        });
+
+        expect(res.statusCode).toBe(204);
+        expect(mockPlantsRepository.delete).toHaveBeenCalledExactlyOnceWith(
+            testUser.id,
+            '507f1f77bcf86cd799439011'
+        );
+    });
+
+    it('returns 404 when no plant has that id', async () => {
+        vi.mocked(mockPlantsRepository.delete).mockResolvedValue(false);
+
+        const res = await app.inject({
+            method: 'DELETE',
+            url: '/plants/507f1f77bcf86cd799439011',
+        });
+
+        expect(res.statusCode).toBe(404);
     });
 });
 

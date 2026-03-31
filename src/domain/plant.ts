@@ -23,8 +23,18 @@ export interface CreatePlantData {
     notes: string | null;
 }
 
+export interface UpdatePlantData {
+    name?: string;
+    description?: string | null;
+    photoUrl?: string | null;
+    acquiredAt?: string | null;
+    notes?: string | null;
+}
+
 export interface PlantsRepository {
     findAll(userId: string): Promise<Plant[]>;
     findById(userId: string, id: string): Promise<Plant | null>;
     create(data: CreatePlantData): Promise<Plant>;
+    update(userId: string, id: string, data: UpdatePlantData): Promise<Plant | null>;
+    delete(userId: string, id: string): Promise<boolean>;
 }

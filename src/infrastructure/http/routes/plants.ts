@@ -5,6 +5,15 @@ import { OID } from './oid.js';
 import careSchedulesRoutes from './care-schedules.js';
 import careLogsRoutes from './care-logs.js';
 
+const UpdatePlantBody = Type.Object({
+    name: Type.Optional(Type.String()),
+    description: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+    photoUrl: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+    acquiredAt: Type.Optional(Type.Union([Type.String({ format: 'date-time' }), Type.Null()])),
+    notes: Type.Optional(Type.Union([Type.String(), Type.Null()]))
+});
+type UpdatePlantBody = Static<typeof UpdatePlantBody>;
+
 const CreatePlantBody = Type.Object({
     name: Type.String(),
     description: Type.Optional(Type.Union([Type.String(), Type.Null()])),
@@ -53,6 +62,33 @@ const plantsRoutes: FastifyPluginCallback = (fastify, _opts, done) => {
                 notes: notes ?? null
             });
             return reply.status(201).header('Location', `${request.url}/${plant.id}`).send(plant);
+        }
+    );
+
+    fastify.patch<{ Params: PlantParams; Body: UpdatePlantBody }>(
+        '/:plantId',
+        { schema: { params: PlantParams, body: UpdatePlantBody, response: { 200: PlantSchema } } },
+        async (request, reply) => {
+            const plant = await fastify.plantsRepository.update(
+                request.user!.id,
+                request.params.plantId,
+                request.body
+            );
+            if (!plant) return reply.status(404).send();
+            return plant;
+        }
+    );
+
+    fastify.delete<{ Params: PlantParams }>(
+        '/:plantId',
+        { schema: { params: PlantParams } },
+        async (request, reply) => {
+            const deleted = await fastify.plantsRepository.delete(
+                request.user!.id,
+                request.params.plantId
+            );
+            if (!deleted) return reply.status(404).send();
+            return reply.status(204).send();
         }
     );
 

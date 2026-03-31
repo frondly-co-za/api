@@ -107,3 +107,72 @@ describe('findById', () => {
         await expect(repo.findById(userId, 'not-a-valid-id')).rejects.toThrow();
     });
 });
+
+describe('update', () => {
+    it('returns null when no plant has that id', async () => {
+        expect(await repo.update(userId, new ObjectId().toHexString(), { name: 'X' })).toBeNull();
+    });
+
+    it('returns null when the plant belongs to a different user', async () => {
+        const plant = await createPlant('Cactus');
+        const otherUserId = new ObjectId().toHexString();
+
+        expect(await repo.update(otherUserId, plant.id, { name: 'X' })).toBeNull();
+    });
+
+    it('updates only the provided fields and bumps updatedAt', async () => {
+        const plant = await createPlant('Cactus');
+
+        const updated = await repo.update(userId, plant.id, { name: 'Updated Cactus' });
+
+        expect(updated).not.toBeNull();
+        expect(updated!.name).toBe('Updated Cactus');
+        expect(updated!.description).toBeNull();
+        expect(updated!.updatedAt >= plant.updatedAt).toBe(true);
+    });
+
+    it('converts acquiredAt string to Date and back', async () => {
+        const plant = await createPlant('Cactus');
+        const acquiredAt = '2025-06-15T00:00:00.000Z';
+
+        const updated = await repo.update(userId, plant.id, { acquiredAt });
+
+        expect(updated!.acquiredAt).toBe(acquiredAt);
+    });
+
+    it('sets acquiredAt to null when explicitly passed null', async () => {
+        const plant = await repo.create({
+            userId,
+            name: 'Cactus',
+            description: null,
+            photoUrl: null,
+            acquiredAt: '2025-06-15T00:00:00.000Z',
+            notes: null,
+        });
+
+        const updated = await repo.update(userId, plant.id, { acquiredAt: null });
+
+        expect(updated!.acquiredAt).toBeNull();
+    });
+});
+
+describe('delete', () => {
+    it('returns false when no plant has that id', async () => {
+        expect(await repo.delete(userId, new ObjectId().toHexString())).toBe(false);
+    });
+
+    it('returns false when the plant belongs to a different user', async () => {
+        const plant = await createPlant('Cactus');
+        const otherUserId = new ObjectId().toHexString();
+
+        expect(await repo.delete(otherUserId, plant.id)).toBe(false);
+        expect(await repo.findById(userId, plant.id)).not.toBeNull();
+    });
+
+    it('deletes the plant and returns true', async () => {
+        const plant = await createPlant('Cactus');
+
+        expect(await repo.delete(userId, plant.id)).toBe(true);
+        expect(await repo.findById(userId, plant.id)).toBeNull();
+    });
+});

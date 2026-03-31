@@ -1,5 +1,5 @@
 import { Db, ObjectId, WithId } from 'mongodb';
-import { Plant, CreatePlantData, PlantsRepository } from '$domain/plant.js';
+import { Plant, CreatePlantData, UpdatePlantData, PlantsRepository } from '$domain/plant.js';
 
 interface PlantDocument {
     _id: ObjectId;
@@ -63,5 +63,30 @@ export class MongoPlantsRepository implements PlantsRepository {
         };
         await this.collection.insertOne(doc);
         return this.toPlant(doc);
+    }
+
+    async update(userId: string, id: string, data: UpdatePlantData): Promise<Plant | null> {
+        const { acquiredAt, ...rest } = data;
+        const $set: Partial<PlantDocument> & { updatedAt: Date } = {
+            ...rest,
+            updatedAt: new Date()
+        };
+        if (acquiredAt !== undefined) {
+            $set.acquiredAt = acquiredAt ? new Date(acquiredAt) : null;
+        }
+        const result = await this.collection.findOneAndUpdate(
+            { _id: new ObjectId(id), userId: new ObjectId(userId) },
+            { $set },
+            { returnDocument: 'after' }
+        );
+        return result ? this.toPlant(result) : null;
+    }
+
+    async delete(userId: string, id: string): Promise<boolean> {
+        const result = await this.collection.deleteOne({
+            _id: new ObjectId(id),
+            userId: new ObjectId(userId)
+        });
+        return result.deletedCount > 0;
     }
 }
