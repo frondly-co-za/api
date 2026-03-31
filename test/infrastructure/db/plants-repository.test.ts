@@ -29,6 +29,39 @@ beforeEach(async () => {
 const createPlant = (name: string) =>
     repo.create({ userId, name, description: null, photoUrl: null, acquiredAt: null, notes: null });
 
+describe('create', () => {
+    it('persists the plant and returns it with a generated id', async () => {
+        const plant = await createPlant('Cactus');
+
+        expect(plant.name).toBe('Cactus');
+        expect(plant.userId).toBe(userId);
+        expect(plant.id).toBeTypeOf('string');
+        expect(plant.id).toHaveLength(24); // hex ObjectId
+        expect(plant.description).toBeNull();
+        expect(plant.createdAt).toBeTypeOf('string');
+        expect(plant.updatedAt).toBeTypeOf('string');
+
+        // Verify it was actually persisted
+        expect(await repo.findById(userId, plant.id)).toEqual(plant);
+    });
+
+    it('stores acquiredAt when provided', async () => {
+        const acquiredAt = '2025-06-15T00:00:00.000Z';
+        const plant = await repo.create({
+            userId,
+            name: 'Monstera',
+            description: 'Monstera Deliciosa',
+            photoUrl: null,
+            acquiredAt,
+            notes: 'Bought at the market',
+        });
+
+        expect(plant.acquiredAt).toBe(acquiredAt);
+        expect(plant.description).toBe('Monstera Deliciosa');
+        expect(plant.notes).toBe('Bought at the market');
+    });
+});
+
 describe('findAll', () => {
     it('returns an empty array when there are no plants', async () => {
         expect(await repo.findAll(userId)).toEqual([]);
@@ -72,38 +105,5 @@ describe('findById', () => {
 
     it('throws when given a string that is not a valid ObjectId', async () => {
         await expect(repo.findById(userId, 'not-a-valid-id')).rejects.toThrow();
-    });
-});
-
-describe('create', () => {
-    it('persists the plant and returns it with a generated id', async () => {
-        const plant = await createPlant('Cactus');
-
-        expect(plant.name).toBe('Cactus');
-        expect(plant.userId).toBe(userId);
-        expect(plant.id).toBeTypeOf('string');
-        expect(plant.id).toHaveLength(24); // hex ObjectId
-        expect(plant.description).toBeNull();
-        expect(plant.createdAt).toBeTypeOf('string');
-        expect(plant.updatedAt).toBeTypeOf('string');
-
-        // Verify it was actually persisted
-        expect(await repo.findById(userId, plant.id)).toEqual(plant);
-    });
-
-    it('stores acquiredAt when provided', async () => {
-        const acquiredAt = '2025-06-15T00:00:00.000Z';
-        const plant = await repo.create({
-            userId,
-            name: 'Monstera',
-            description: 'Monstera Deliciosa',
-            photoUrl: null,
-            acquiredAt,
-            notes: 'Bought at the market',
-        });
-
-        expect(plant.acquiredAt).toBe(acquiredAt);
-        expect(plant.description).toBe('Monstera Deliciosa');
-        expect(plant.notes).toBe('Bought at the market');
     });
 });
