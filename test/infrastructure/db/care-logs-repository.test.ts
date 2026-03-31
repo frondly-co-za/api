@@ -77,16 +77,6 @@ describe('findByPlantId', () => {
         expect(logs).toHaveLength(2);
     });
 
-    it('filters by scheduleId when provided', async () => {
-        await createLog(); // ad-hoc (scheduleId: null)
-        const scheduled = await createLog({ scheduleId });
-
-        const logs = await repo.findByPlantId(userId, plantId, scheduleId);
-
-        expect(logs).toHaveLength(1);
-        expect(logs[0].id).toBe(scheduled.id);
-    });
-
     it("does not return another user's logs", async () => {
         await createLog();
         const otherUserId = new ObjectId().toHexString();

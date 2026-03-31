@@ -2,7 +2,6 @@ import { Static, Type } from 'typebox';
 import { FastifyPluginCallback } from 'fastify';
 import { CareScheduleSchema } from '$domain/care-schedule.js';
 import { OID } from './oid.js';
-import careLogsRoutes from './care-logs.js';
 
 const PlantParams = Type.Object({ plantId: Type.String(OID) });
 type PlantParams = Static<typeof PlantParams>;
@@ -124,7 +123,6 @@ const careSchedulesRoutes: FastifyPluginCallback = (fastify, _opts, done) => {
         }
     );
 
-    fastify.register(careLogsRoutes, { prefix: '/:scheduleId/logs', context: 'schedule' });
     done();
 };
 

@@ -1,5 +1,5 @@
 import { Db, ObjectId, WithId } from 'mongodb';
-import { CareLog, ResolvedCreateCareLogData, CareLogsRepository } from '$domain/care-log.js';
+import { CareLog, CreateCareLogData, CareLogsRepository } from '$domain/care-log.js';
 
 interface CareLogDocument {
     _id: ObjectId;
@@ -34,13 +34,10 @@ export class MongoCareLogsRepository implements CareLogsRepository {
         };
     }
 
-    async findByPlantId(userId: string, plantId: string, scheduleId?: string): Promise<CareLog[]> {
-        const query: Record<string, unknown> = {
-            userId: new ObjectId(userId),
-            plantId: new ObjectId(plantId)
-        };
-        if (scheduleId !== undefined) query.scheduleId = new ObjectId(scheduleId);
-        const docs = await this.collection.find(query).toArray();
+    async findByPlantId(userId: string, plantId: string): Promise<CareLog[]> {
+        const docs = await this.collection
+            .find({ userId: new ObjectId(userId), plantId: new ObjectId(plantId) })
+            .toArray();
         return docs.map((doc) => this.toCareLog(doc));
     }
 
@@ -53,7 +50,7 @@ export class MongoCareLogsRepository implements CareLogsRepository {
         return doc ? this.toCareLog(doc) : null;
     }
 
-    async create(data: ResolvedCreateCareLogData): Promise<CareLog> {
+    async create(data: CreateCareLogData): Promise<CareLog> {
         const now = new Date();
         const _id = new ObjectId();
         const doc: CareLogDocument = {

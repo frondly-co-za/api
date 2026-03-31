@@ -10,7 +10,7 @@ vi.mock('$application/next-due.js', () => ({
 import { computeNextDue } from '$application/next-due.js';
 
 const mockLogsRepo: CareLogsRepository = {
-    findByPlantId: vi.fn<(userId: string, plantId: string, scheduleId?: string) => Promise<CareLog[]>>(),
+    findByPlantId: vi.fn<(userId: string, plantId: string) => Promise<CareLog[]>>(),
     findById: vi.fn<(userId: string, plantId: string, id: string) => Promise<CareLog | null>>(),
     create: vi.fn(),
     delete: vi.fn<(userId: string, plantId: string, id: string) => Promise<boolean>>(),
@@ -63,19 +63,11 @@ const log: CareLog = {
 };
 
 describe('getByPlantId', () => {
-    it('delegates to repo.findByPlantId without scheduleId', async () => {
+    it('delegates to repo.findByPlantId', async () => {
         vi.mocked(mockLogsRepo.findByPlantId).mockResolvedValue([log]);
 
         expect(await service.getByPlantId(userId, plantId)).toEqual([log]);
-        expect(mockLogsRepo.findByPlantId).toHaveBeenCalledExactlyOnceWith(userId, plantId, undefined);
-    });
-
-    it('delegates to repo.findByPlantId with scheduleId', async () => {
-        vi.mocked(mockLogsRepo.findByPlantId).mockResolvedValue([log]);
-
-        await service.getByPlantId(userId, plantId, scheduleId);
-
-        expect(mockLogsRepo.findByPlantId).toHaveBeenCalledExactlyOnceWith(userId, plantId, scheduleId);
+        expect(mockLogsRepo.findByPlantId).toHaveBeenCalledExactlyOnceWith(userId, plantId);
     });
 });
 
@@ -112,7 +104,7 @@ describe('create (ad-hoc)', () => {
 });
 
 describe('create (scheduled)', () => {
-    it('resolves careTypeId from schedule when not provided and updates nextDue', async () => {
+    it('creates the log and updates nextDue when careTypeId matches the schedule', async () => {
         const scheduledLog = { ...log, scheduleId };
         vi.mocked(mockSchedulesRepo.findById).mockResolvedValue(schedule);
         vi.mocked(mockLogsRepo.create).mockResolvedValue(scheduledLog);
@@ -122,7 +114,7 @@ describe('create (scheduled)', () => {
             userId,
             plantId,
             scheduleId,
-            // careTypeId omitted — should be resolved from schedule
+            careTypeId,
             selectedOption: null,
             notes: null,
             performedAt: log.performedAt,
@@ -138,27 +130,6 @@ describe('create (scheduled)', () => {
         });
     });
 
-    it('uses the provided careTypeId even when scheduleId is set', async () => {
-        const overriddenTypeId = '507f1f77bcf86cd799439099';
-        vi.mocked(mockSchedulesRepo.findById).mockResolvedValue(schedule);
-        vi.mocked(mockLogsRepo.create).mockResolvedValue(log);
-        vi.mocked(mockSchedulesRepo.update).mockResolvedValue(schedule);
-
-        await service.create({
-            userId,
-            plantId,
-            scheduleId,
-            careTypeId: overriddenTypeId,
-            selectedOption: null,
-            notes: null,
-            performedAt: log.performedAt,
-        });
-
-        expect(mockLogsRepo.create).toHaveBeenCalledExactlyOnceWith(
-            expect.objectContaining({ careTypeId: overriddenTypeId })
-        );
-    });
-
     it('returns null when the schedule does not exist', async () => {
         vi.mocked(mockSchedulesRepo.findById).mockResolvedValue(null);
 
@@ -166,6 +137,24 @@ describe('create (scheduled)', () => {
             userId,
             plantId,
             scheduleId,
+            careTypeId,
+            selectedOption: null,
+            notes: null,
+            performedAt: log.performedAt,
+        });
+
+        expect(result).toBeNull();
+        expect(mockLogsRepo.create).not.toHaveBeenCalled();
+    });
+
+    it('returns null when careTypeId does not match the schedule', async () => {
+        vi.mocked(mockSchedulesRepo.findById).mockResolvedValue(schedule);
+
+        const result = await service.create({
+            userId,
+            plantId,
+            scheduleId,
+            careTypeId: '507f1f77bcf86cd799439099',
             selectedOption: null,
             notes: null,
             performedAt: log.performedAt,

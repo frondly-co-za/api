@@ -8,8 +8,8 @@ export class CareLogsService {
         private readonly careSchedules: CareSchedulesRepository
     ) {}
 
-    getByPlantId(userId: string, plantId: string, scheduleId?: string): Promise<CareLog[]> {
-        return this.careLogs.findByPlantId(userId, plantId, scheduleId);
+    getByPlantId(userId: string, plantId: string): Promise<CareLog[]> {
+        return this.careLogs.findByPlantId(userId, plantId);
     }
 
     getById(userId: string, plantId: string, id: string): Promise<CareLog | null> {
@@ -17,8 +17,6 @@ export class CareLogsService {
     }
 
     async create(data: CreateCareLogData): Promise<CareLog | null> {
-        let { careTypeId } = data;
-
         if (data.scheduleId) {
             const schedule = await this.careSchedules.findById(
                 data.userId,
@@ -26,9 +24,9 @@ export class CareLogsService {
                 data.scheduleId
             );
             if (!schedule) return null;
-            careTypeId ??= schedule.careTypeId;
+            if (schedule.careTypeId !== data.careTypeId) return null;
 
-            const log = await this.careLogs.create({ ...data, careTypeId });
+            const log = await this.careLogs.create(data);
 
             const nextDue = computeNextDue(
                 new Date(data.performedAt),
@@ -43,9 +41,7 @@ export class CareLogsService {
             return log;
         }
 
-        if (!careTypeId) throw new Error('careTypeId is required for ad-hoc care logs');
-
-        return this.careLogs.create({ ...data, careTypeId });
+        return this.careLogs.create(data);
     }
 
     delete(userId: string, plantId: string, id: string): Promise<boolean> {

@@ -2,7 +2,7 @@ import { Type } from 'typebox';
 import { FastifyPluginCallback } from 'fastify';
 import { CareScheduleSchema } from '$domain/care-schedule.js';
 
-const DueQuerystring = Type.Object({
+const DueQuery = Type.Object({
     asOf: Type.Optional(Type.String({ format: 'date-time' }))
 });
 
@@ -11,7 +11,7 @@ const schedulesRoutes: FastifyPluginCallback = (fastify, _opts, done) => {
         '/due',
         {
             schema: {
-                querystring: DueQuerystring,
+                querystring: DueQuery,
                 response: { 200: Type.Array(CareScheduleSchema) }
             }
         },

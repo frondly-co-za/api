@@ -18,21 +18,15 @@ export interface CreateCareLogData {
     userId: string;
     plantId: string;
     scheduleId: string | null;
-    careTypeId?: string; // optional when scheduleId is set — resolved from the schedule by the service
+    careTypeId: string;
     selectedOption: string | null;
     notes: string | null;
     performedAt: string;
 }
 
-// The repository always receives a fully resolved careTypeId — the service is responsible
-// for resolving it from the schedule when it is omitted in CreateCareLogData.
-export type ResolvedCreateCareLogData = Omit<CreateCareLogData, 'careTypeId'> & {
-    careTypeId: string;
-};
-
 export interface CareLogsRepository {
-    findByPlantId(userId: string, plantId: string, scheduleId?: string): Promise<CareLog[]>;
+    findByPlantId(userId: string, plantId: string): Promise<CareLog[]>;
     findById(userId: string, plantId: string, id: string): Promise<CareLog | null>;
-    create(data: ResolvedCreateCareLogData): Promise<CareLog>;
+    create(data: CreateCareLogData): Promise<CareLog>;
     delete(userId: string, plantId: string, id: string): Promise<boolean>;
 }
