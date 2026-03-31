@@ -24,14 +24,18 @@ export interface CareLogsOptions {
     scheduleContext: boolean;
 }
 
-const careLogsRoute: FastifyPluginCallback<CareLogsOptions> = (fastify, opts, done) => {
+const careLogsRoutes: FastifyPluginCallback<CareLogsOptions> = (fastify, opts, done) => {
     // Param schemas vary by context — scheduleId is only present in the scheduled context
     const listParams = opts.scheduleContext
         ? Type.Object({ plantId: Type.String(OID), scheduleId: Type.String(OID) })
         : Type.Object({ plantId: Type.String(OID) });
 
     const itemParams = opts.scheduleContext
-        ? Type.Object({ plantId: Type.String(OID), scheduleId: Type.String(OID), logId: Type.String(OID) })
+        ? Type.Object({
+              plantId: Type.String(OID),
+              scheduleId: Type.String(OID),
+              logId: Type.String(OID)
+          })
         : Type.Object({ plantId: Type.String(OID), logId: Type.String(OID) });
 
     type ListParams = { plantId: string; scheduleId?: string };
@@ -62,7 +66,13 @@ const careLogsRoute: FastifyPluginCallback<CareLogsOptions> = (fastify, opts, do
     if (opts.scheduleContext) {
         fastify.post<{ Body: ScheduledLogBody; Params: ListParams }>(
             '/',
-            { schema: { params: listParams, body: ScheduledLogBody, response: { 201: CareLogSchema } } },
+            {
+                schema: {
+                    params: listParams,
+                    body: ScheduledLogBody,
+                    response: { 201: CareLogSchema }
+                }
+            },
             async (request, reply) => {
                 const { plantId, scheduleId } = request.params;
                 const { careTypeId, selectedOption, notes, performedAt } = request.body;
@@ -83,7 +93,9 @@ const careLogsRoute: FastifyPluginCallback<CareLogsOptions> = (fastify, opts, do
     } else {
         fastify.post<{ Body: AdHocLogBody; Params: ListParams }>(
             '/',
-            { schema: { params: listParams, body: AdHocLogBody, response: { 201: CareLogSchema } } },
+            {
+                schema: { params: listParams, body: AdHocLogBody, response: { 201: CareLogSchema } }
+            },
             async (request, reply) => {
                 const { plantId } = request.params;
                 const { careTypeId, selectedOption, notes, performedAt } = request.body;
@@ -118,4 +130,4 @@ const careLogsRoute: FastifyPluginCallback<CareLogsOptions> = (fastify, opts, do
     done();
 };
 
-export default careLogsRoute;
+export default careLogsRoutes;

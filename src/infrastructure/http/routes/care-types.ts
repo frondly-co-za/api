@@ -18,7 +18,7 @@ const UpdateCareTypeBody = Type.Object({
 });
 type UpdateCareTypeBody = Static<typeof UpdateCareTypeBody>;
 
-const careTypesRoute: FastifyPluginCallback = (fastify, _opts, done) => {
+const careTypesRoutes: FastifyPluginCallback = (fastify, _opts, done) => {
     fastify.get(
         '/',
         { schema: { response: { 200: Type.Array(CareTypeSchema) } } },
@@ -86,4 +86,4 @@ const careTypesRoute: FastifyPluginCallback = (fastify, _opts, done) => {
     done();
 };
 
-export default careTypesRoute;
+export default careTypesRoutes;

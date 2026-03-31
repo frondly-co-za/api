@@ -2,7 +2,7 @@ import { Static, Type } from 'typebox';
 import { FastifyPluginCallback } from 'fastify';
 import { CareScheduleSchema } from '$domain/care-schedule.js';
 import { OID } from './oid.js';
-import careLogsRoute from './care-logs.js';
+import careLogsRoutes from './care-logs.js';
 
 const PlantParams = Type.Object({ plantId: Type.String(OID) });
 type PlantParams = Static<typeof PlantParams>;
@@ -36,7 +36,7 @@ const UpdateScheduleBody = Type.Object({
 });
 type UpdateScheduleBody = Static<typeof UpdateScheduleBody>;
 
-const careSchedulesRoute: FastifyPluginCallback = (fastify, _opts, done) => {
+const careSchedulesRoutes: FastifyPluginCallback = (fastify, _opts, done) => {
     fastify.get<{ Params: PlantParams }>(
         '/',
         { schema: { params: PlantParams, response: { 200: Type.Array(CareScheduleSchema) } } },
@@ -58,7 +58,13 @@ const careSchedulesRoute: FastifyPluginCallback = (fastify, _opts, done) => {
 
     fastify.post<{ Params: PlantParams; Body: CreateScheduleBody }>(
         '/',
-        { schema: { params: PlantParams, body: CreateScheduleBody, response: { 201: CareScheduleSchema } } },
+        {
+            schema: {
+                params: PlantParams,
+                body: CreateScheduleBody,
+                response: { 201: CareScheduleSchema }
+            }
+        },
         async (request, reply) => {
             const { plantId } = request.params;
             const { careTypeId, selectedOption, notes, dayOfWeek, dayOfMonth, months } =
@@ -107,8 +113,8 @@ const careSchedulesRoute: FastifyPluginCallback = (fastify, _opts, done) => {
         }
     );
 
-    fastify.register(careLogsRoute, { prefix: '/:scheduleId/logs', scheduleContext: true });
+    fastify.register(careLogsRoutes, { prefix: '/:scheduleId/logs', scheduleContext: true });
     done();
 };
 
-export default careSchedulesRoute;
+export default careSchedulesRoutes;

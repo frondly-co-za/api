@@ -2,8 +2,8 @@ import { Static, Type } from 'typebox';
 import { FastifyPluginCallback } from 'fastify';
 import { PlantSchema } from '$domain/plant.js';
 import { OID } from './oid.js';
-import careSchedulesRoute from './care-schedules.js';
-import careLogsRoute from './care-logs.js';
+import careSchedulesRoutes from './care-schedules.js';
+import careLogsRoutes from './care-logs.js';
 
 const CreatePlantBody = Type.Object({
     name: Type.String(),
@@ -17,7 +17,7 @@ type CreatePlantBody = Static<typeof CreatePlantBody>;
 const PlantParams = Type.Object({ plantId: Type.String(OID) });
 type PlantParams = Static<typeof PlantParams>;
 
-const plantsRoute: FastifyPluginCallback = (fastify, _opts, done) => {
+const plantsRoutes: FastifyPluginCallback = (fastify, _opts, done) => {
     fastify.get(
         '/',
         { schema: { response: { 200: Type.Array(PlantSchema) } } },
@@ -53,9 +53,9 @@ const plantsRoute: FastifyPluginCallback = (fastify, _opts, done) => {
         }
     );
 
-    fastify.register(careSchedulesRoute, { prefix: '/:plantId/schedules' });
-    fastify.register(careLogsRoute, { prefix: '/:plantId/logs', scheduleContext: false });
+    fastify.register(careSchedulesRoutes, { prefix: '/:plantId/schedules' });
+    fastify.register(careLogsRoutes, { prefix: '/:plantId/logs', scheduleContext: false });
     done();
 };
 
-export default plantsRoute;
+export default plantsRoutes;
