@@ -1,4 +1,5 @@
 import Fastify from 'fastify';
+import cors from '@fastify/cors';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
 import plantsRoutes from './routes/plants.js';
@@ -9,16 +10,22 @@ import auth from './plugins/auth.js';
 
 const fastify = Fastify({ logger: true });
 
-// Dependencies
-fastify.register(dbConnector);
-fastify.register(services);
-
-// Open routes
+// Infrastructure
+const corsOrigin = process.env.CORS_ORIGIN
+    ? process.env.CORS_ORIGIN.split(',').map((o) => o.trim())
+    : true;
+fastify.register(cors, { origin: corsOrigin });
 fastify.register(swagger, {
     openapi: {
         info: { title: 'Frondly API', version: '0.0.1' }
     }
 });
+
+// Dependencies
+fastify.register(dbConnector);
+fastify.register(services);
+
+// Open routes
 fastify.register(swaggerUi, { routePrefix: '/swagger' });
 
 // Authenticated Routes

@@ -9,6 +9,8 @@ npm run dev          # Start development server with hot reload (tsx watch)
 npm run build        # Compile TypeScript to dist/
 npm start            # Run compiled production build
 
+npm run seed         # Seed system care types into the database (idempotent)
+
 npm test             # Run tests once
 npm run test:watch   # Run tests in watch mode
 # Run a single test file:
