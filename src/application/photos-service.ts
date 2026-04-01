@@ -2,17 +2,17 @@ import { randomBytes } from 'crypto';
 import { Readable } from 'stream';
 import { Photo, PhotosRepository, PhotoStorage, UploadToPlantData } from '$domain/photo.js';
 import { Plant, PlantsRepository } from '$domain/plant.js';
-import type { FastifyBaseLogger } from 'fastify';
+import type { Logger } from './logger.js';
 
 export class PhotosService {
     constructor(
         private readonly photosRepo: PhotosRepository,
         private readonly plantsRepo: PlantsRepository,
         private readonly storage: PhotoStorage,
-        private readonly log: FastifyBaseLogger
+        private readonly log: Logger
     ) {}
 
-    async uploadToPlant(data: UploadToPlantData, log?: FastifyBaseLogger): Promise<Photo> {
+    async uploadToPlant(data: UploadToPlantData, log?: Logger): Promise<Photo> {
         const logger = log ?? this.log;
         const { userId, plantId, buffer, filename, takenAt, setAsCover } = data;
         const photoId = randomBytes(12).toString('hex');
@@ -38,7 +38,7 @@ export class PhotosService {
                 { err, uri },
                 'DB write failed after storage save, cleaning up orphaned file'
             );
-            await this.storage.delete(uri).catch((deleteErr) => {
+            await this.storage.delete(uri).catch((deleteErr: unknown) => {
                 logger.warn(
                     { err: deleteErr, uri },
                     'failed to delete orphaned file after DB write failure'
@@ -48,17 +48,19 @@ export class PhotosService {
         }
     }
 
-    async delete(userId: string, photoId: string, log?: FastifyBaseLogger): Promise<boolean> {
+    async delete(userId: string, photoId: string, log?: Logger): Promise<boolean> {
         const logger = log ?? this.log;
         const photo = await this.photosRepo.findById(userId, photoId);
         if (!photo) return false;
 
         await this.photosRepo.delete(userId, photoId);
 
-        await this.plantsRepo.clearCoverPhoto(userId, photo.plantId, photoId).catch((err) => {
-            logger.warn({ err, photoId }, 'failed to clear cover photo reference on plant');
-        });
-        await this.storage.delete(photo.uri).catch((err) => {
+        await this.plantsRepo
+            .clearCoverPhoto(userId, photo.plantId, photoId)
+            .catch((err: unknown) => {
+                logger.warn({ err, photoId }, 'failed to clear cover photo reference on plant');
+            });
+        await this.storage.delete(photo.uri).catch((err: unknown) => {
             logger.warn({ err, uri: photo.uri }, 'failed to delete photo file from storage');
         });
 

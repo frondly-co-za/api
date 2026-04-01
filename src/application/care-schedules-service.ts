@@ -5,12 +5,12 @@ import {
     UpdateCareScheduleData
 } from '$domain/care-schedule.js';
 import { computeNextDue } from './next-due.js';
-import type { FastifyBaseLogger } from 'fastify';
+import type { Logger } from './logger.js';
 
 export class CareSchedulesService {
     constructor(
         private readonly careSchedules: CareSchedulesRepository,
-        private readonly log: FastifyBaseLogger
+        private readonly log: Logger
     ) {}
 
     getByPlantId(userId: string, plantId: string): Promise<CareSchedule[]> {
@@ -34,7 +34,7 @@ export class CareSchedulesService {
         userId: string,
         id: string,
         data: UpdateCareScheduleData,
-        log?: FastifyBaseLogger
+        log?: Logger
     ): Promise<CareSchedule | null> {
         const logger = log ?? this.log;
         const updated = await this.careSchedules.update(userId, id, data);

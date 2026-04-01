@@ -1,13 +1,13 @@
 import { CareLog, CreateCareLogData, CareLogsRepository } from '$domain/care-log.js';
 import { CareSchedulesRepository } from '$domain/care-schedule.js';
 import { computeNextDue } from './next-due.js';
-import type { FastifyBaseLogger } from 'fastify';
+import type { Logger } from './logger.js';
 
 export class CareLogsService {
     constructor(
         private readonly careLogs: CareLogsRepository,
         private readonly careSchedules: CareSchedulesRepository,
-        private readonly log: FastifyBaseLogger
+        private readonly log: Logger
     ) {}
 
     getByPlantId(userId: string, plantId: string): Promise<CareLog[]> {
@@ -18,7 +18,7 @@ export class CareLogsService {
         return this.careLogs.findById(userId, plantId, id);
     }
 
-    async create(data: CreateCareLogData, log?: FastifyBaseLogger): Promise<CareLog | null> {
+    async create(data: CreateCareLogData, log?: Logger): Promise<CareLog | null> {
         const logger = log ?? this.log;
         if (data.scheduleId) {
             const schedule = await this.careSchedules.findById(
