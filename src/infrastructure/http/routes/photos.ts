@@ -1,7 +1,18 @@
 import { Static, Type } from 'typebox';
 import { FastifyPluginCallback } from 'fastify';
-import { PhotoSchema } from '$domain/photo.js';
+import { Photo, PhotoSchema } from '$domain/photo.js';
 import { OID } from './oid.js';
+import { signPhotoUrl, verifyPhotoSignature } from '$infrastructure/http/signing/photo-url.js';
+
+const PhotoResponse = Type.Object({
+    ...PhotoSchema.properties,
+    url: Type.String()
+});
+type PhotoResponse = Static<typeof PhotoResponse>;
+
+function withUrl(photo: Photo): PhotoResponse {
+    return { ...photo, url: signPhotoUrl(photo.id, process.env.PHOTO_SIGNING_SECRET!) };
+}
 
 const PhotoParams = Type.Object({ photoId: Type.String(OID) });
 type PhotoParams = Static<typeof PhotoParams>;
@@ -23,13 +34,14 @@ const photosRoutes: FastifyPluginCallback<PhotosOptions> = (fastify, opts, done)
     if (opts.context === 'plant') {
         fastify.get<{ Params: PlantPhotoParams }>(
             '/',
-            { schema: { params: PlantPhotoParams, response: { 200: Type.Array(PhotoSchema) } } },
+            { schema: { params: PlantPhotoParams, response: { 200: Type.Array(PhotoResponse) } } },
             async (request, reply) => {
                 const { plantId } = request.params;
                 const userId = request.user!.id;
                 const plant = await fastify.plantsRepository.findById(userId, plantId);
                 if (!plant) return reply.status(404).send();
-                return fastify.photosRepository.findAllByPlant(userId, plantId);
+                const photos = await fastify.photosRepository.findAllByPlant(userId, plantId);
+                return photos.map(withUrl);
             }
         );
 
@@ -39,7 +51,7 @@ const photosRoutes: FastifyPluginCallback<PhotosOptions> = (fastify, opts, done)
                 schema: {
                     params: PlantPhotoParams,
                     querystring: PlantPhotoQuery,
-                    response: { 201: PhotoSchema }
+                    response: { 201: PhotoResponse }
                 }
             },
             async (request, reply) => {
@@ -76,23 +88,33 @@ const photosRoutes: FastifyPluginCallback<PhotosOptions> = (fastify, opts, done)
                 return reply
                     .status(201)
                     .header('Location', `${servePrefix}/${photo.id}`)
-                    .send(photo);
+                    .send(withUrl(photo));
             }
         );
     }
 
     if (opts.context === 'serve') {
-        fastify.get<{ Params: PhotoParams }>(
+        const ServeQuery = Type.Object({
+            expires: Type.String(),
+            sig: Type.String()
+        });
+        type ServeQuery = Static<typeof ServeQuery>;
+
+        fastify.get<{ Params: PhotoParams; Querystring: ServeQuery }>(
             '/:photoId',
-            { schema: { params: PhotoParams } },
+            { schema: { params: PhotoParams, querystring: ServeQuery } },
             async (request, reply) => {
-                const stream = await fastify.photosService.getFile(request.params.photoId);
+                const { photoId } = request.params;
+                const { expires, sig } = request.query;
+                if (
+                    !verifyPhotoSignature(photoId, expires, sig, process.env.PHOTO_SIGNING_SECRET!)
+                ) {
+                    return reply.status(403).send();
+                }
+                const stream = await fastify.photosService.getFile(photoId);
                 if (!stream) return reply.status(404).send();
                 stream.on('error', (err) => {
-                    request.log.warn(
-                        { err, photoId: request.params.photoId },
-                        'photo stream error'
-                    );
+                    request.log.warn({ err, photoId }, 'photo stream error');
                     reply.status(404).send();
                 });
                 return reply.type('image/webp').send(stream);
@@ -101,6 +123,21 @@ const photosRoutes: FastifyPluginCallback<PhotosOptions> = (fastify, opts, done)
     }
 
     if (opts.context === 'manage') {
+        const UrlResponse = Type.Object({ url: Type.String() });
+
+        fastify.get<{ Params: PhotoParams }>(
+            '/:photoId/url',
+            { schema: { params: PhotoParams, response: { 200: UrlResponse } } },
+            async (request, reply) => {
+                const photo = await fastify.photosRepository.findById(
+                    request.user!.id,
+                    request.params.photoId
+                );
+                if (!photo) return reply.status(404).send();
+                return { url: signPhotoUrl(photo.id, process.env.PHOTO_SIGNING_SECRET!) };
+            }
+        );
+
         fastify.delete<{ Params: PhotoParams }>(
             '/:photoId',
             { schema: { params: PhotoParams } },

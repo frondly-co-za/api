@@ -1,12 +1,16 @@
-import { describe, it, expect, vi, afterAll, beforeEach } from 'vitest';
+import { describe, it, expect, vi, afterAll, beforeAll, beforeEach } from 'vitest';
 import { Readable } from 'stream';
 import Fastify from 'fastify';
 import multipart from '@fastify/multipart';
 import photosRoutes from '$infrastructure/http/routes/photos.js';
+import { signPhotoUrl } from '$infrastructure/http/signing/photo-url.js';
 import type { Photo, PhotosRepository } from '$domain/photo.js';
 import type { Plant, PlantsRepository } from '$domain/plant.js';
 import type { PhotosService } from '$application/photos-service.js';
 import type { User } from '$domain/user.js';
+
+const TEST_SECRET = 'test-signing-secret';
+beforeAll(() => { process.env.PHOTO_SIGNING_SECRET = TEST_SECRET; });
 
 const testUser: User = {
     id: '507f1f77bcf86cd799439012',
@@ -118,14 +122,16 @@ describe('GET /plants/:plantId/photos', () => {
     afterAll(() => app.close());
     beforeEach(() => vi.clearAllMocks());
 
-    it('returns 200 with the plant gallery', async () => {
+    it('returns 200 with the plant gallery including signed urls', async () => {
         vi.mocked(mockPlantsRepository.findById).mockResolvedValue(plant);
         vi.mocked(mockPhotosRepository.findAllByPlant).mockResolvedValue([photo]);
 
         const res = await app.inject({ method: 'GET', url: PLANT_BASE });
 
         expect(res.statusCode).toBe(200);
-        expect(res.json()).toEqual([photo]);
+        const [result] = res.json();
+        expect(result).toMatchObject(photo);
+        expect(result.url).toMatch(new RegExp(`^/photos/${photoId}\\?expires=\\d+&sig=[a-f0-9]{64}$`));
         expect(mockPhotosRepository.findAllByPlant).toHaveBeenCalledExactlyOnceWith(testUser.id, plantId);
     });
 
@@ -165,7 +171,8 @@ describe('POST /plants/:plantId/photos', () => {
         });
 
         expect(res.statusCode).toBe(201);
-        expect(res.json()).toEqual(photo);
+        expect(res.json()).toMatchObject(photo);
+        expect(res.json().url).toMatch(new RegExp(`^/photos/${photoId}\\?expires=\\d+&sig=[a-f0-9]{64}$`));
         expect(res.headers['location']).toBe(`/photos/${photo.id}`);
         expect(mockPhotosService.uploadToPlant).toHaveBeenCalledExactlyOnceWith(
             expect.objectContaining({ userId: testUser.id, plantId, filename: 'photo.jpg', takenAt: null })
@@ -278,20 +285,50 @@ describe('GET /photos/:photoId', () => {
     afterAll(() => app.close());
     beforeEach(() => vi.clearAllMocks());
 
-    it('returns 200 with the image stream', async () => {
+    it('returns 200 with the image stream for a valid signed URL', async () => {
         const stream = Readable.from(Buffer.from('webp-data'));
         vi.mocked(mockPhotosService.getFile).mockResolvedValue(stream);
 
-        const res = await app.inject({ method: 'GET', url: `/photos/${photoId}` });
+        const res = await app.inject({ method: 'GET', url: signPhotoUrl(photoId, TEST_SECRET) });
 
         expect(res.statusCode).toBe(200);
         expect(res.headers['content-type']).toContain('image/webp');
     });
 
+    it('returns 403 when the signature is invalid', async () => {
+        const expires = Math.floor(Date.now() / 1000) + 300;
+        const res = await app.inject({
+            method: 'GET',
+            url: `/photos/${photoId}?expires=${expires}&sig=${'a'.repeat(64)}`
+        });
+
+        expect(res.statusCode).toBe(403);
+        expect(mockPhotosService.getFile).not.toHaveBeenCalled();
+    });
+
+    it('returns 403 when the signature is expired', async () => {
+        const { createHmac } = await import('crypto');
+        const expires = Math.floor(Date.now() / 1000) - 1;
+        const sig = createHmac('sha256', TEST_SECRET).update(`${photoId}:${expires}`).digest('hex');
+        const res = await app.inject({
+            method: 'GET',
+            url: `/photos/${photoId}?expires=${expires}&sig=${sig}`
+        });
+
+        expect(res.statusCode).toBe(403);
+        expect(mockPhotosService.getFile).not.toHaveBeenCalled();
+    });
+
+    it('returns 400 when signature query params are missing', async () => {
+        const res = await app.inject({ method: 'GET', url: `/photos/${photoId}` });
+
+        expect(res.statusCode).toBe(400);
+    });
+
     it('returns 404 when the photo does not exist', async () => {
         vi.mocked(mockPhotosService.getFile).mockResolvedValue(null);
 
-        const res = await app.inject({ method: 'GET', url: `/photos/${photoId}` });
+        const res = await app.inject({ method: 'GET', url: signPhotoUrl(photoId, TEST_SECRET) });
 
         expect(res.statusCode).toBe(404);
     });
@@ -308,12 +345,38 @@ describe('GET /photos/:photoId', () => {
 function buildManageApp() {
     const app = Fastify({ logger: false });
     const mockPhotosService = buildMockService();
+    const mockPhotosRepository = buildMockPhotosRepo();
     app.decorateRequest('user', null);
     app.addHook('preHandler', async (request) => { request.user = testUser; });
     app.decorate('photosService', mockPhotosService as never);
+    app.decorate('photosRepository', mockPhotosRepository as never);
     app.register(photosRoutes, { prefix: '/photos', context: 'manage' });
-    return { app, mockPhotosService };
+    return { app, mockPhotosService, mockPhotosRepository };
 }
+
+describe('GET /photos/:photoId/url', () => {
+    const { app, mockPhotosRepository } = buildManageApp();
+    afterAll(() => app.close());
+    beforeEach(() => vi.clearAllMocks());
+
+    it('returns 200 with a signed url for a valid photo', async () => {
+        vi.mocked(mockPhotosRepository.findById).mockResolvedValue(photo);
+
+        const res = await app.inject({ method: 'GET', url: `/photos/${photoId}/url` });
+
+        expect(res.statusCode).toBe(200);
+        const { url } = res.json();
+        expect(url).toMatch(new RegExp(`^/photos/${photoId}\\?expires=\\d+&sig=[a-f0-9]{64}$`));
+    });
+
+    it('returns 404 when the photo does not belong to the user', async () => {
+        vi.mocked(mockPhotosRepository.findById).mockResolvedValue(null);
+
+        const res = await app.inject({ method: 'GET', url: `/photos/${photoId}/url` });
+
+        expect(res.statusCode).toBe(404);
+    });
+});
 
 describe('DELETE /photos/:photoId', () => {
     const { app, mockPhotosService } = buildManageApp();

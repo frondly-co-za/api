@@ -1,4 +1,6 @@
-import { describe, it, expect, vi, afterAll, beforeEach } from 'vitest';
+import { describe, it, expect, vi, afterAll, beforeAll, beforeEach } from 'vitest';
+
+beforeAll(() => { process.env.PHOTO_SIGNING_SECRET = 'test-signing-secret'; });
 import Fastify from 'fastify';
 import multipart from '@fastify/multipart';
 import plantsRoute from '$infrastructure/http/routes/plants.js';
@@ -85,8 +87,27 @@ describe('GET /plants', () => {
         const res = await app.inject({ method: 'GET', url: '/plants' });
 
         expect(res.statusCode).toBe(200);
-        expect(res.json()).toEqual([plant]);
+        expect(res.json()).toMatchObject([plant]);
         expect(mockPlantsRepository.findAll).toHaveBeenCalledExactlyOnceWith(testUser.id);
+    });
+
+    it('returns coverPhotoUrl as null when coverPhotoId is null', async () => {
+        vi.mocked(mockPlantsRepository.findAll).mockResolvedValue([plant]);
+
+        const [result] = (await app.inject({ method: 'GET', url: '/plants' })).json();
+
+        expect(result.coverPhotoUrl).toBeNull();
+    });
+
+    it('returns a signed coverPhotoUrl when coverPhotoId is set', async () => {
+        const plantWithCover = { ...plant, coverPhotoId: plant.id };
+        vi.mocked(mockPlantsRepository.findAll).mockResolvedValue([plantWithCover]);
+
+        const [result] = (await app.inject({ method: 'GET', url: '/plants' })).json();
+
+        expect(result.coverPhotoUrl).toMatch(
+            new RegExp(`^/photos/${plant.id}\\?expires=\\d+&sig=[a-f0-9]{64}$`)
+        );
     });
 });
 
@@ -101,7 +122,7 @@ describe('GET /plants/:plantId', () => {
         const res = await app.inject({ method: 'GET', url: '/plants/507f1f77bcf86cd799439011' });
 
         expect(res.statusCode).toBe(200);
-        expect(res.json()).toEqual(plant);
+        expect(res.json()).toMatchObject(plant);
     });
 
     it('returns 404 when no plant has that id', async () => {
@@ -136,7 +157,7 @@ describe('PATCH /plants/:plantId', () => {
         });
 
         expect(res.statusCode).toBe(200);
-        expect(res.json()).toEqual(updated);
+        expect(res.json()).toMatchObject(updated);
         expect(mockPlantsRepository.update).toHaveBeenCalledExactlyOnceWith(
             testUser.id,
             '507f1f77bcf86cd799439011',
@@ -226,7 +247,7 @@ describe('POST /plants', () => {
         });
 
         expect(res.statusCode).toBe(201);
-        expect(res.json()).toEqual(plant);
+        expect(res.json()).toMatchObject(plant);
         expect(res.headers['location']).toBe('/plants/507f1f77bcf86cd799439011');
     });
 

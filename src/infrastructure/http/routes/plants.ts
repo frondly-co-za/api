@@ -1,7 +1,8 @@
 import { Static, Type } from 'typebox';
 import { FastifyPluginCallback } from 'fastify';
-import { PlantSchema, CreatePlantDataSchema, UpdatePlantDataSchema } from '$domain/plant.js';
+import { Plant, PlantSchema, CreatePlantDataSchema, UpdatePlantDataSchema } from '$domain/plant.js';
 import { OID } from './oid.js';
+import { signPhotoUrl } from '$infrastructure/http/signing/photo-url.js';
 import careSchedulesRoutes from './care-schedules.js';
 import careLogsRoutes from './care-logs.js';
 import photosRoutes from './photos.js';
@@ -19,6 +20,20 @@ const CreatePlantBody = Type.Object({
 });
 type CreatePlantBody = Static<typeof CreatePlantBody>;
 
+const PlantResponse = Type.Object({
+    ...PlantSchema.properties,
+    coverPhotoUrl: Type.Union([Type.String(), Type.Null()])
+});
+type PlantResponse = Static<typeof PlantResponse>;
+
+function withCoverUrl(plant: Plant): PlantResponse {
+    const secret = process.env.PHOTO_SIGNING_SECRET!;
+    return {
+        ...plant,
+        coverPhotoUrl: plant.coverPhotoId ? signPhotoUrl(plant.coverPhotoId, secret) : null
+    };
+}
+
 const SetCoverBody = Type.Object({ photoId: Type.String(OID) });
 type SetCoverBody = Static<typeof SetCoverBody>;
 
@@ -28,28 +43,29 @@ type PlantParams = Static<typeof PlantParams>;
 const plantsRoutes: FastifyPluginCallback = (fastify, _opts, done) => {
     fastify.get(
         '/',
-        { schema: { response: { 200: Type.Array(PlantSchema) } } },
+        { schema: { response: { 200: Type.Array(PlantResponse) } } },
         async (request) => {
-            return fastify.plantsRepository.findAll(request.user!.id);
+            const plants = await fastify.plantsRepository.findAll(request.user!.id);
+            return plants.map(withCoverUrl);
         }
     );
 
     fastify.get<{ Params: PlantParams }>(
         '/:plantId',
-        { schema: { params: PlantParams, response: { 200: PlantSchema } } },
+        { schema: { params: PlantParams, response: { 200: PlantResponse } } },
         async (request, reply) => {
             const plant = await fastify.plantsRepository.findById(
                 request.user!.id,
                 request.params.plantId
             );
             if (!plant) return reply.status(404).send();
-            return plant;
+            return withCoverUrl(plant);
         }
     );
 
     fastify.post<{ Body: CreatePlantBody }>(
         '/',
-        { schema: { body: CreatePlantBody, response: { 201: PlantSchema } } },
+        { schema: { body: CreatePlantBody, response: { 201: PlantResponse } } },
         async (request, reply) => {
             const { name, description, acquiredAt, notes } = request.body;
             const plant = await fastify.plantsRepository.create({
@@ -59,13 +75,18 @@ const plantsRoutes: FastifyPluginCallback = (fastify, _opts, done) => {
                 acquiredAt: acquiredAt ?? null,
                 notes: notes ?? null
             });
-            return reply.status(201).header('Location', `${request.url}/${plant.id}`).send(plant);
+            return reply
+                .status(201)
+                .header('Location', `${request.url}/${plant.id}`)
+                .send(withCoverUrl(plant));
         }
     );
 
     fastify.patch<{ Params: PlantParams; Body: UpdatePlantBody }>(
         '/:plantId',
-        { schema: { params: PlantParams, body: UpdatePlantBody, response: { 200: PlantSchema } } },
+        {
+            schema: { params: PlantParams, body: UpdatePlantBody, response: { 200: PlantResponse } }
+        },
         async (request, reply) => {
             const plant = await fastify.plantsRepository.update(
                 request.user!.id,
@@ -73,7 +94,7 @@ const plantsRoutes: FastifyPluginCallback = (fastify, _opts, done) => {
                 request.body
             );
             if (!plant) return reply.status(404).send();
-            return plant;
+            return withCoverUrl(plant);
         }
     );
 
@@ -93,7 +114,7 @@ const plantsRoutes: FastifyPluginCallback = (fastify, _opts, done) => {
 
     fastify.patch<{ Params: PlantParams; Body: SetCoverBody }>(
         '/:plantId/cover',
-        { schema: { params: PlantParams, body: SetCoverBody, response: { 200: PlantSchema } } },
+        { schema: { params: PlantParams, body: SetCoverBody, response: { 200: PlantResponse } } },
         async (request, reply) => {
             const plant = await fastify.photosService.setCoverPhoto(
                 request.user!.id,
@@ -101,7 +122,7 @@ const plantsRoutes: FastifyPluginCallback = (fastify, _opts, done) => {
                 request.body.photoId
             );
             if (!plant) return reply.status(404).send();
-            return plant;
+            return withCoverUrl(plant);
         }
     );
 

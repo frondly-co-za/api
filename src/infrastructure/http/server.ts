@@ -65,6 +65,15 @@ if (process.env.NODE_ENV !== 'production') {
 }
 
 // Open routes
+fastify.get('/health', async (_request, reply) => {
+    try {
+        await fastify.mongo.db?.admin().ping();
+        return reply.send({ status: 'ok' });
+    } catch {
+        return reply.status(503).send({ status: 'unavailable' });
+    }
+});
+
 fastify.register(photosRoutes, { prefix: '/photos', context: 'serve' });
 
 // Authenticated Routes
