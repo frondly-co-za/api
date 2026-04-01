@@ -75,7 +75,7 @@ function buildMockPhotosRepo() {
 }
 
 /** Builds a minimal multipart/form-data body with an optional takenAt field before the file. */
-function buildMultipartBody(boundary: string, filename: string, fileContent: Buffer, takenAt?: string) {
+function buildMultipartBody(boundary: string, filename: string, fileContent: Buffer, takenAt?: string, mimeType = 'image/jpeg') {
     const parts: Buffer[] = [];
     if (takenAt !== undefined) {
         parts.push(Buffer.from(
@@ -87,7 +87,7 @@ function buildMultipartBody(boundary: string, filename: string, fileContent: Buf
     parts.push(Buffer.from(
         `--${boundary}\r\n` +
         `Content-Disposition: form-data; name="file"; filename="${filename}"\r\n` +
-        `Content-Type: image/jpeg\r\n\r\n`
+        `Content-Type: ${mimeType}\r\n\r\n`
     ));
     parts.push(fileContent);
     parts.push(Buffer.from(`\r\n--${boundary}--\r\n`));
@@ -216,6 +216,34 @@ describe('POST /plants/:plantId/photos', () => {
         });
 
         expect(res.statusCode).toBe(404);
+        expect(mockPhotosService.uploadToPlant).not.toHaveBeenCalled();
+    });
+
+    it('returns 415 when the file mime type is not an allowed image type', async () => {
+        vi.mocked(mockPlantsRepository.findById).mockResolvedValue(plant);
+
+        const res = await app.inject({
+            method: 'POST',
+            url: PLANT_BASE,
+            headers: { 'content-type': `multipart/form-data; boundary=${boundary}` },
+            payload: buildMultipartBody(boundary, 'malicious.pdf', fakeFile, undefined, 'application/pdf')
+        });
+
+        expect(res.statusCode).toBe(415);
+        expect(mockPhotosService.uploadToPlant).not.toHaveBeenCalled();
+    });
+
+    it('returns 415 for text/plain mime type', async () => {
+        vi.mocked(mockPlantsRepository.findById).mockResolvedValue(plant);
+
+        const res = await app.inject({
+            method: 'POST',
+            url: PLANT_BASE,
+            headers: { 'content-type': `multipart/form-data; boundary=${boundary}` },
+            payload: buildMultipartBody(boundary, 'script.txt', fakeFile, undefined, 'text/plain')
+        });
+
+        expect(res.statusCode).toBe(415);
         expect(mockPhotosService.uploadToPlant).not.toHaveBeenCalled();
     });
 

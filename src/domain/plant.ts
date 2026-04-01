@@ -3,11 +3,11 @@ import { Static, Type } from 'typebox';
 export const PlantSchema = Type.Object({
     id: Type.String(),
     userId: Type.String(),
-    name: Type.String(),
-    description: Type.Union([Type.String(), Type.Null()]),
+    name: Type.String({ maxLength: 256 }),
+    description: Type.Union([Type.String({ maxLength: 256 }), Type.Null()]),
     coverPhotoId: Type.Union([Type.String(), Type.Null()]),
     acquiredAt: Type.Union([Type.String({ format: 'date-time' }), Type.Null()]),
-    notes: Type.Union([Type.String(), Type.Null()]),
+    notes: Type.Union([Type.String({ maxLength: 1000 }), Type.Null()]),
     createdAt: Type.String({ format: 'date-time' }),
     updatedAt: Type.String({ format: 'date-time' })
 });
@@ -16,19 +16,19 @@ export type Plant = Static<typeof PlantSchema>;
 
 export const CreatePlantDataSchema = Type.Object({
     userId: Type.String(),
-    name: Type.String(),
-    description: Type.Union([Type.String(), Type.Null()]),
+    name: Type.String({ maxLength: 256 }),
+    description: Type.Union([Type.String({ maxLength: 256 }), Type.Null()]),
     acquiredAt: Type.Union([Type.String({ format: 'date-time' }), Type.Null()]),
-    notes: Type.Union([Type.String(), Type.Null()])
+    notes: Type.Union([Type.String({ maxLength: 1000 }), Type.Null()])
 });
 export type CreatePlantData = Static<typeof CreatePlantDataSchema>;
 
 export const UpdatePlantDataSchema = Type.Object({
-    name: Type.Optional(Type.String()),
-    description: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+    name: Type.Optional(Type.String({ maxLength: 256 })),
+    description: Type.Optional(Type.Union([Type.String({ maxLength: 256 }), Type.Null()])),
     coverPhotoId: Type.Optional(Type.Union([Type.String(), Type.Null()])),
     acquiredAt: Type.Optional(Type.Union([Type.String({ format: 'date-time' }), Type.Null()])),
-    notes: Type.Optional(Type.Union([Type.String(), Type.Null()]))
+    notes: Type.Optional(Type.Union([Type.String({ maxLength: 1000 }), Type.Null()]))
 });
 export type UpdatePlantData = Static<typeof UpdatePlantDataSchema>;
 

@@ -45,7 +45,10 @@ function servicesPlugin(fastify: FastifyInstance) {
         new CareLogsService(new MongoCareLogsRepository(db), careSchedulesRepo, fastify.log)
     );
     const photosRepo = new MongoPhotosRepository(db);
-    const photoStorage = new LocalPhotoStorage(process.env.PHOTO_STORAGE_PATH ?? './uploads');
+    const photoStorage = new LocalPhotoStorage(
+        process.env.PHOTO_STORAGE_PATH ?? './uploads',
+        fastify.log
+    );
     fastify.decorate('photosRepository', photosRepo);
     fastify.decorate(
         'photosService',

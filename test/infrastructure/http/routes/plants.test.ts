@@ -155,6 +155,28 @@ describe('PATCH /plants/:plantId', () => {
 
         expect(res.statusCode).toBe(404);
     });
+
+    it('returns 400 when name exceeds 256 characters', async () => {
+        const res = await app.inject({
+            method: 'PATCH',
+            url: '/plants/507f1f77bcf86cd799439011',
+            payload: { name: 'a'.repeat(257) },
+        });
+
+        expect(res.statusCode).toBe(400);
+        expect(mockPlantsRepository.update).not.toHaveBeenCalled();
+    });
+
+    it('returns 400 when notes exceeds 1000 characters', async () => {
+        const res = await app.inject({
+            method: 'PATCH',
+            url: '/plants/507f1f77bcf86cd799439011',
+            payload: { notes: 'a'.repeat(1001) },
+        });
+
+        expect(res.statusCode).toBe(400);
+        expect(mockPlantsRepository.update).not.toHaveBeenCalled();
+    });
 });
 
 describe('DELETE /plants/:plantId', () => {
@@ -213,6 +235,28 @@ describe('POST /plants', () => {
             method: 'POST',
             url: '/plants',
             payload: {},
+        });
+
+        expect(res.statusCode).toBe(400);
+        expect(mockPlantsRepository.create).not.toHaveBeenCalled();
+    });
+
+    it('returns 400 when name exceeds 256 characters', async () => {
+        const res = await app.inject({
+            method: 'POST',
+            url: '/plants',
+            payload: { name: 'a'.repeat(257) },
+        });
+
+        expect(res.statusCode).toBe(400);
+        expect(mockPlantsRepository.create).not.toHaveBeenCalled();
+    });
+
+    it('returns 400 when notes exceeds 1000 characters', async () => {
+        const res = await app.inject({
+            method: 'POST',
+            url: '/plants',
+            payload: { name: 'Cactus', notes: 'a'.repeat(1001) },
         });
 
         expect(res.statusCode).toBe(400);

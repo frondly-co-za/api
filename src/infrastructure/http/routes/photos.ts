@@ -52,6 +52,11 @@ const photosRoutes: FastifyPluginCallback<PhotosOptions> = (fastify, opts, done)
                 const file = await request.file();
                 if (!file) return reply.status(400).send({ message: 'No file uploaded' });
 
+                const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+                if (!allowedMimeTypes.includes(file.mimetype)) {
+                    return reply.status(415).send({ message: 'Unsupported file type' });
+                }
+
                 const takenAtField = file.fields['takenAt'] as
                     | { type: string; value: unknown }
                     | undefined;

@@ -5,8 +5,8 @@ export const CareScheduleSchema = Type.Object({
     userId: Type.String(),
     plantId: Type.String(),
     careTypeId: Type.String(),
-    selectedOption: Type.Union([Type.String(), Type.Null()]),
-    notes: Type.Union([Type.String(), Type.Null()]),
+    selectedOption: Type.Union([Type.String({ maxLength: 256 }), Type.Null()]),
+    notes: Type.Union([Type.String({ maxLength: 1000 }), Type.Null()]),
 
     // Recurrence — cron-subset fields.
     // Empty array means "match any" for that dimension.
@@ -31,8 +31,8 @@ export const CreateCareScheduleDataSchema = Type.Object({
     userId: Type.String(),
     plantId: Type.String(),
     careTypeId: Type.String(),
-    selectedOption: Type.Union([Type.String(), Type.Null()]),
-    notes: Type.Union([Type.String(), Type.Null()]),
+    selectedOption: Type.Union([Type.String({ maxLength: 256 }), Type.Null()]),
+    notes: Type.Union([Type.String({ maxLength: 1000 }), Type.Null()]),
     // Empty array means "match any" for that dimension
     dayOfWeek: Type.Array(Type.Integer({ minimum: 0, maximum: 6 })),
     dayOfMonth: Type.Array(Type.Integer({ minimum: 1, maximum: 31 })),
@@ -43,8 +43,8 @@ export type CreateCareScheduleData = Static<typeof CreateCareScheduleDataSchema>
 
 export const UpdateCareScheduleDataSchema = Type.Object({
     careTypeId: Type.Optional(Type.String()),
-    selectedOption: Type.Optional(Type.Union([Type.String(), Type.Null()])),
-    notes: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+    selectedOption: Type.Optional(Type.Union([Type.String({ maxLength: 256 }), Type.Null()])),
+    notes: Type.Optional(Type.Union([Type.String({ maxLength: 1000 }), Type.Null()])),
     dayOfWeek: Type.Optional(Type.Array(Type.Integer({ minimum: 0, maximum: 6 }))),
     dayOfMonth: Type.Optional(Type.Array(Type.Integer({ minimum: 1, maximum: 31 }))),
     months: Type.Optional(Type.Array(Type.Integer({ minimum: 1, maximum: 12 }))),
