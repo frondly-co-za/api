@@ -84,7 +84,10 @@ const photosRoutes: FastifyPluginCallback<PhotosOptions> = (fastify, opts, done)
                 const stream = await fastify.photosService.getFile(request.params.photoId);
                 if (!stream) return reply.status(404).send();
                 stream.on('error', (err) => {
-                    request.log.warn({ err, photoId: request.params.photoId }, 'photo stream error');
+                    request.log.warn(
+                        { err, photoId: request.params.photoId },
+                        'photo stream error'
+                    );
                     reply.status(404).send();
                 });
                 return reply.type('image/webp').send(stream);

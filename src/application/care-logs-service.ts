@@ -26,12 +26,19 @@ export class CareLogsService {
                 data.scheduleId
             );
             if (!schedule) {
-                this.log.debug({ scheduleId: data.scheduleId }, 'care log rejected: schedule not found');
+                this.log.debug(
+                    { scheduleId: data.scheduleId },
+                    'care log rejected: schedule not found'
+                );
                 return null;
             }
             if (schedule.careTypeId !== data.careTypeId) {
                 this.log.debug(
-                    { scheduleId: data.scheduleId, expected: schedule.careTypeId, got: data.careTypeId },
+                    {
+                        scheduleId: data.scheduleId,
+                        expected: schedule.careTypeId,
+                        got: data.careTypeId
+                    },
                     'care log rejected: care type mismatch'
                 );
                 return null;

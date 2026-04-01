@@ -33,7 +33,10 @@ export class PhotosService {
             }
             return photo;
         } catch (err) {
-            this.log.warn({ err, uri }, 'DB write failed after storage save, cleaning up orphaned file');
+            this.log.warn(
+                { err, uri },
+                'DB write failed after storage save, cleaning up orphaned file'
+            );
             await this.storage.delete(uri).catch(() => {});
             throw err;
         }
