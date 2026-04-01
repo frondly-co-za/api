@@ -31,6 +31,18 @@ const defaultData = {
     timezone: 'Africa/Johannesburg',
 };
 
+describe('findByAuth0Sub', () => {
+    it('returns null when no user exists with that sub', async () => {
+        expect(await repo.findByAuth0Sub('auth0|unknown')).toBeNull();
+    });
+
+    it('returns the user when they exist', async () => {
+        const created = await repo.upsert(defaultData);
+        const found = await repo.findByAuth0Sub(defaultData.auth0Sub);
+        expect(found).toEqual(created);
+    });
+});
+
 describe('upsert', () => {
     it('creates a new user and returns it with a generated id', async () => {
         const user = await repo.upsert(defaultData);

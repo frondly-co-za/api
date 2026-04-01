@@ -1,7 +1,11 @@
 import { createRemoteJWKSet, jwtVerify } from 'jose';
 
 const JWKS = createRemoteJWKSet(
-    new URL(`https://${process.env.AUTH0_DOMAIN}/.well-known/jwks.json`)
+    new URL(`https://${process.env.AUTH0_DOMAIN}/.well-known/jwks.json`),
+    {
+        cacheMaxAge: 10 * 60 * 1000, // re-fetch keys after 10 minutes
+        cooldownDuration: 30 * 1000 // minimum 30 seconds between re-fetches on failure
+    }
 );
 
 export interface Auth0JwtPayload {

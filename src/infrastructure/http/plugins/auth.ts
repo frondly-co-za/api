@@ -29,12 +29,15 @@ const authPlugin: FastifyPluginCallback = (fastify, _opts, done) => {
 
         try {
             const payload = await verifyJwt(token);
-            request.user = await fastify.usersRepository.upsert({
-                auth0Sub: payload.sub,
-                email: payload.email ?? '',
-                name: payload.name ?? '',
-                timezone: 'Africa/Johannesburg'
-            });
+            const existing = await fastify.usersRepository.findByAuth0Sub(payload.sub);
+            request.user =
+                existing ??
+                (await fastify.usersRepository.upsert({
+                    auth0Sub: payload.sub,
+                    email: payload.email ?? '',
+                    name: payload.name ?? '',
+                    timezone: 'Africa/Johannesburg'
+                }));
         } catch {
             return reply
                 .status(401)

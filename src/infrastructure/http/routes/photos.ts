@@ -5,7 +5,7 @@ import { OID } from './oid.js';
 import { signPhotoUrl, verifyPhotoSignature } from '$infrastructure/http/signing/photo-url.js';
 
 const PhotoResponse = Type.Object({
-    ...PhotoSchema.properties,
+    ...Type.Omit(PhotoSchema, ['uri']).properties,
     url: Type.String()
 });
 type PhotoResponse = Static<typeof PhotoResponse>;
@@ -75,14 +75,17 @@ const photosRoutes: FastifyPluginCallback<PhotosOptions> = (fastify, opts, done)
                 const takenAt = takenAtField?.type === 'field' ? String(takenAtField.value) : null;
 
                 const buffer = await file.toBuffer();
-                const photo = await fastify.photosService.uploadToPlant({
-                    userId,
-                    plantId,
-                    buffer,
-                    filename: file.filename || null,
-                    takenAt,
-                    setAsCover: request.query.setAsCover
-                });
+                const photo = await fastify.photosService.uploadToPlant(
+                    {
+                        userId,
+                        plantId,
+                        buffer,
+                        filename: file.filename || null,
+                        takenAt,
+                        setAsCover: request.query.setAsCover
+                    },
+                    request.log
+                );
 
                 const servePrefix = opts.servePrefix ?? '/photos';
                 return reply
@@ -144,7 +147,8 @@ const photosRoutes: FastifyPluginCallback<PhotosOptions> = (fastify, opts, done)
             async (request, reply) => {
                 const deleted = await fastify.photosService.delete(
                     request.user!.id,
-                    request.params.photoId
+                    request.params.photoId,
+                    request.log
                 );
                 if (!deleted) return reply.status(404).send();
                 return reply.status(204).send();

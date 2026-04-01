@@ -49,15 +49,18 @@ const careLogsRoutes: FastifyPluginCallback = (fastify, _opts, done) => {
         async (request, reply) => {
             const { plantId } = request.params;
             const { careTypeId, scheduleId, selectedOption, notes, performedAt } = request.body;
-            const log = await fastify.careLogsService.create({
-                userId: request.user!.id,
-                plantId,
-                scheduleId: scheduleId ?? null,
-                careTypeId,
-                selectedOption: selectedOption ?? null,
-                notes: notes ?? null,
-                performedAt: performedAt ?? new Date().toISOString()
-            });
+            const log = await fastify.careLogsService.create(
+                {
+                    userId: request.user!.id,
+                    plantId,
+                    scheduleId: scheduleId ?? null,
+                    careTypeId,
+                    selectedOption: selectedOption ?? null,
+                    notes: notes ?? null,
+                    performedAt: performedAt ?? new Date().toISOString()
+                },
+                request.log
+            );
             if (!log) return reply.status(404).send();
             return reply.status(201).header('Location', `${request.url}/${log.id}`).send(log);
         }

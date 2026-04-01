@@ -33,8 +33,10 @@ export class CareSchedulesService {
     async update(
         userId: string,
         id: string,
-        data: UpdateCareScheduleData
+        data: UpdateCareScheduleData,
+        log?: FastifyBaseLogger
     ): Promise<CareSchedule | null> {
+        const logger = log ?? this.log;
         const updated = await this.careSchedules.update(userId, id, data);
         if (!updated) return null;
 
@@ -50,7 +52,7 @@ export class CareSchedulesService {
                 updated.dayOfMonth,
                 updated.months
             );
-            this.log.debug(
+            logger.debug(
                 { scheduleId: id, nextDue: nextDue.toISOString() },
                 'recurrence changed, recomputed nextDue'
             );

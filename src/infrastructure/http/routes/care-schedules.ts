@@ -105,7 +105,8 @@ const careSchedulesRoutes: FastifyPluginCallback = (fastify, _opts, done) => {
             const schedule = await fastify.careSchedulesService.update(
                 request.user!.id,
                 request.params.scheduleId,
-                request.body
+                request.body,
+                request.log
             );
             if (!schedule) return reply.status(404).send();
             return schedule;

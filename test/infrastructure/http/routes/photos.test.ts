@@ -129,8 +129,10 @@ describe('GET /plants/:plantId/photos', () => {
         const res = await app.inject({ method: 'GET', url: PLANT_BASE });
 
         expect(res.statusCode).toBe(200);
+        const { uri: _, ...photoWithoutUri } = photo;
         const [result] = res.json();
-        expect(result).toMatchObject(photo);
+        expect(result).toMatchObject(photoWithoutUri);
+        expect(result.uri).toBeUndefined();
         expect(result.url).toMatch(new RegExp(`^/photos/${photoId}\\?expires=\\d+&sig=[a-f0-9]{64}$`));
         expect(mockPhotosRepository.findAllByPlant).toHaveBeenCalledExactlyOnceWith(testUser.id, plantId);
     });
@@ -171,11 +173,14 @@ describe('POST /plants/:plantId/photos', () => {
         });
 
         expect(res.statusCode).toBe(201);
-        expect(res.json()).toMatchObject(photo);
+        const { uri: _, ...photoWithoutUri } = photo;
+        expect(res.json()).toMatchObject(photoWithoutUri);
+        expect(res.json().uri).toBeUndefined();
         expect(res.json().url).toMatch(new RegExp(`^/photos/${photoId}\\?expires=\\d+&sig=[a-f0-9]{64}$`));
         expect(res.headers['location']).toBe(`/photos/${photo.id}`);
         expect(mockPhotosService.uploadToPlant).toHaveBeenCalledExactlyOnceWith(
-            expect.objectContaining({ userId: testUser.id, plantId, filename: 'photo.jpg', takenAt: null })
+            expect.objectContaining({ userId: testUser.id, plantId, filename: 'photo.jpg', takenAt: null }),
+            expect.anything()
         );
     });
 
@@ -191,7 +196,8 @@ describe('POST /plants/:plantId/photos', () => {
         });
 
         expect(mockPhotosService.uploadToPlant).toHaveBeenCalledExactlyOnceWith(
-            expect.objectContaining({ setAsCover: true })
+            expect.objectContaining({ setAsCover: true }),
+            expect.anything()
         );
     });
 
@@ -208,7 +214,8 @@ describe('POST /plants/:plantId/photos', () => {
         });
 
         expect(mockPhotosService.uploadToPlant).toHaveBeenCalledExactlyOnceWith(
-            expect.objectContaining({ takenAt })
+            expect.objectContaining({ takenAt }),
+            expect.anything()
         );
     });
 
@@ -389,10 +396,18 @@ describe('DELETE /photos/:photoId', () => {
         const res = await app.inject({ method: 'DELETE', url: `/photos/${photoId}` });
 
         expect(res.statusCode).toBe(204);
-        expect(mockPhotosService.delete).toHaveBeenCalledExactlyOnceWith(testUser.id, photoId);
+        expect(mockPhotosService.delete).toHaveBeenCalledExactlyOnceWith(testUser.id, photoId, expect.anything());
     });
 
     it('returns 404 when the photo is not found', async () => {
+        vi.mocked(mockPhotosService.delete).mockResolvedValue(false);
+
+        const res = await app.inject({ method: 'DELETE', url: `/photos/${photoId}` });
+
+        expect(res.statusCode).toBe(404);
+    });
+
+    it('returns 404 (not 403) when the photo belongs to a different user', async () => {
         vi.mocked(mockPhotosService.delete).mockResolvedValue(false);
 
         const res = await app.inject({ method: 'DELETE', url: `/photos/${photoId}` });

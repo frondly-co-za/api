@@ -12,7 +12,8 @@ export class PhotosService {
         private readonly log: FastifyBaseLogger
     ) {}
 
-    async uploadToPlant(data: UploadToPlantData): Promise<Photo> {
+    async uploadToPlant(data: UploadToPlantData, log?: FastifyBaseLogger): Promise<Photo> {
+        const logger = log ?? this.log;
         const { userId, plantId, buffer, filename, takenAt, setAsCover } = data;
         const photoId = randomBytes(12).toString('hex');
         const uri = `${userId}/${plantId}/${photoId}.webp`;
@@ -33,26 +34,32 @@ export class PhotosService {
             }
             return photo;
         } catch (err) {
-            this.log.warn(
+            logger.warn(
                 { err, uri },
                 'DB write failed after storage save, cleaning up orphaned file'
             );
-            await this.storage.delete(uri).catch(() => {});
+            await this.storage.delete(uri).catch((deleteErr) => {
+                logger.warn(
+                    { err: deleteErr, uri },
+                    'failed to delete orphaned file after DB write failure'
+                );
+            });
             throw err;
         }
     }
 
-    async delete(userId: string, photoId: string): Promise<boolean> {
+    async delete(userId: string, photoId: string, log?: FastifyBaseLogger): Promise<boolean> {
+        const logger = log ?? this.log;
         const photo = await this.photosRepo.findById(userId, photoId);
         if (!photo) return false;
 
         await this.photosRepo.delete(userId, photoId);
 
         await this.plantsRepo.clearCoverPhoto(userId, photo.plantId, photoId).catch((err) => {
-            this.log.warn({ err, photoId }, 'failed to clear cover photo reference on plant');
+            logger.warn({ err, photoId }, 'failed to clear cover photo reference on plant');
         });
         await this.storage.delete(photo.uri).catch((err) => {
-            this.log.warn({ err, uri: photo.uri }, 'failed to delete photo file from storage');
+            logger.warn({ err, uri: photo.uri }, 'failed to delete photo file from storage');
         });
 
         return true;

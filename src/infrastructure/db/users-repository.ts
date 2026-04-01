@@ -30,6 +30,11 @@ export class MongoUsersRepository implements UsersRepository {
         };
     }
 
+    async findByAuth0Sub(sub: string): Promise<User | null> {
+        const doc = await this.collection.findOne({ auth0Sub: sub });
+        return doc ? this.toUser(doc) : null;
+    }
+
     async upsert(data: UpsertUserData): Promise<User> {
         const now = new Date();
         const result = await this.collection.findOneAndUpdate(

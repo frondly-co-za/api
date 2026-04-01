@@ -18,7 +18,8 @@ export class CareLogsService {
         return this.careLogs.findById(userId, plantId, id);
     }
 
-    async create(data: CreateCareLogData): Promise<CareLog | null> {
+    async create(data: CreateCareLogData, log?: FastifyBaseLogger): Promise<CareLog | null> {
+        const logger = log ?? this.log;
         if (data.scheduleId) {
             const schedule = await this.careSchedules.findById(
                 data.userId,
@@ -26,14 +27,14 @@ export class CareLogsService {
                 data.scheduleId
             );
             if (!schedule) {
-                this.log.debug(
+                logger.debug(
                     { scheduleId: data.scheduleId },
                     'care log rejected: schedule not found'
                 );
                 return null;
             }
             if (schedule.careTypeId !== data.careTypeId) {
-                this.log.debug(
+                logger.debug(
                     {
                         scheduleId: data.scheduleId,
                         expected: schedule.careTypeId,
@@ -44,7 +45,7 @@ export class CareLogsService {
                 return null;
             }
 
-            const log = await this.careLogs.create(data);
+            const careLog = await this.careLogs.create(data);
 
             const nextDue = computeNextDue(
                 new Date(data.performedAt),
@@ -55,12 +56,12 @@ export class CareLogsService {
             await this.careSchedules.update(data.userId, data.scheduleId, {
                 nextDue: nextDue.toISOString()
             });
-            this.log.debug(
+            logger.debug(
                 { scheduleId: data.scheduleId, nextDue: nextDue.toISOString() },
                 'schedule nextDue advanced after care log'
             );
 
-            return log;
+            return careLog;
         }
 
         return this.careLogs.create(data);

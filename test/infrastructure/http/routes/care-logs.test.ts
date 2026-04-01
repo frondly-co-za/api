@@ -11,7 +11,7 @@ const testUser: User = {
     name: 'Test User',
     timezone: 'Africa/Johannesburg',
     createdAt: '2026-01-01T00:00:00.000Z',
-    updatedAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z'
 };
 
 const plantId = '507f1f77bcf86cd799439013';
@@ -24,10 +24,12 @@ function buildApp() {
         getByPlantId: vi.fn<(userId: string, plantId: string) => Promise<CareLog[]>>(),
         getById: vi.fn<(userId: string, plantId: string, id: string) => Promise<CareLog | null>>(),
         create: vi.fn<(data: object) => Promise<CareLog | null>>(),
-        delete: vi.fn<(userId: string, plantId: string, id: string) => Promise<boolean>>(),
+        delete: vi.fn<(userId: string, plantId: string, id: string) => Promise<boolean>>()
     };
     app.decorateRequest('user', null);
-    app.addHook('preHandler', async (request) => { request.user = testUser; });
+    app.addHook('preHandler', async (request) => {
+        request.user = testUser;
+    });
     app.decorate('careLogsService', mockCareLogsService as never);
     app.register(careLogsRoute, { prefix: '/plants/:plantId/logs' });
     return { app, mockCareLogsService };
@@ -42,7 +44,7 @@ const log: CareLog = {
     selectedOption: null,
     notes: null,
     performedAt: '2026-03-31T10:00:00.000Z',
-    createdAt: '2026-03-31T10:00:00.000Z',
+    createdAt: '2026-03-31T10:00:00.000Z'
 };
 
 describe('GET /plants/:plantId/logs', () => {
@@ -105,14 +107,15 @@ describe('POST /plants/:plantId/logs', () => {
         const res = await app.inject({
             method: 'POST',
             url: BASE,
-            payload: { careTypeId: log.careTypeId },
+            payload: { careTypeId: log.careTypeId }
         });
 
         expect(res.statusCode).toBe(201);
         expect(res.json()).toEqual(log);
         expect(res.headers['location']).toBe(`${BASE}/${log.id}`);
         expect(mockCareLogsService.create).toHaveBeenCalledExactlyOnceWith(
-            expect.objectContaining({ scheduleId: null, careTypeId: log.careTypeId })
+            expect.objectContaining({ scheduleId: null, careTypeId: log.careTypeId }),
+            expect.anything()
         );
     });
 
@@ -123,12 +126,13 @@ describe('POST /plants/:plantId/logs', () => {
         const res = await app.inject({
             method: 'POST',
             url: BASE,
-            payload: { careTypeId: log.careTypeId, scheduleId },
+            payload: { careTypeId: log.careTypeId, scheduleId }
         });
 
         expect(res.statusCode).toBe(201);
         expect(mockCareLogsService.create).toHaveBeenCalledExactlyOnceWith(
-            expect.objectContaining({ scheduleId, careTypeId: log.careTypeId })
+            expect.objectContaining({ scheduleId, careTypeId: log.careTypeId }),
+            expect.anything()
         );
     });
 
@@ -145,7 +149,7 @@ describe('POST /plants/:plantId/logs', () => {
         const res = await app.inject({
             method: 'POST',
             url: BASE,
-            payload: { careTypeId: log.careTypeId, scheduleId },
+            payload: { careTypeId: log.careTypeId, scheduleId }
         });
 
         expect(res.statusCode).toBe(404);

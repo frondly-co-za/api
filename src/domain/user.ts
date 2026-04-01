@@ -20,5 +20,6 @@ export interface UpsertUserData {
 }
 
 export interface UsersRepository {
+    findByAuth0Sub(sub: string): Promise<User | null>;
     upsert(data: UpsertUserData): Promise<User>;
 }
