@@ -2,12 +2,14 @@ import { randomBytes } from 'crypto';
 import { Readable } from 'stream';
 import { Photo, PhotosRepository, PhotoStorage, UploadToPlantData } from '$domain/photo.js';
 import { Plant, PlantsRepository } from '$domain/plant.js';
+import type { FastifyBaseLogger } from 'fastify';
 
 export class PhotosService {
     constructor(
         private readonly photosRepo: PhotosRepository,
         private readonly plantsRepo: PlantsRepository,
-        private readonly storage: PhotoStorage
+        private readonly storage: PhotoStorage,
+        private readonly log: FastifyBaseLogger
     ) {}
 
     async uploadToPlant(data: UploadToPlantData): Promise<Photo> {
@@ -31,6 +33,7 @@ export class PhotosService {
             }
             return photo;
         } catch (err) {
+            this.log.warn({ err, uri }, 'DB write failed after storage save, cleaning up orphaned file');
             await this.storage.delete(uri).catch(() => {});
             throw err;
         }
@@ -42,8 +45,12 @@ export class PhotosService {
 
         await this.photosRepo.delete(userId, photoId);
 
-        await this.plantsRepo.clearCoverPhoto(userId, photo.plantId, photoId).catch(() => {});
-        await this.storage.delete(photo.uri).catch(() => {});
+        await this.plantsRepo.clearCoverPhoto(userId, photo.plantId, photoId).catch((err) => {
+            this.log.warn({ err, photoId }, 'failed to clear cover photo reference on plant');
+        });
+        await this.storage.delete(photo.uri).catch((err) => {
+            this.log.warn({ err, uri: photo.uri }, 'failed to delete photo file from storage');
+        });
 
         return true;
     }

@@ -1,8 +1,6 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import multipart from '@fastify/multipart';
-import swagger from '@fastify/swagger';
-import swaggerUi from '@fastify/swagger-ui';
 import plantsRoutes from './routes/plants.js';
 import careTypesRoutes from './routes/care-types.js';
 import schedulesRoutes from './routes/schedules.js';
@@ -11,26 +9,52 @@ import dbConnector from './plugins/db-connector.js';
 import services from './plugins/services.js';
 import auth from './plugins/auth.js';
 
-const fastify = Fastify({ logger: true });
+const fastify = Fastify({
+    logger: process.env.LOG_FILE
+        ? {
+              level: process.env.LOG_LEVEL ?? 'info',
+              transport: {
+                  targets: [
+                      { target: 'pino/file', options: { destination: 1 } },
+                      {
+                          target: 'pino-roll',
+                          options: {
+                              file: process.env.LOG_FILE,
+                              size: '10m',
+                              limit: { count: 5 },
+                              mkdir: true
+                          }
+                      }
+                  ]
+              }
+          }
+        : { level: process.env.LOG_LEVEL ?? 'info' }
+});
 
 // Infrastructure
 const corsOrigin = process.env.CORS_ORIGIN
     ? process.env.CORS_ORIGIN.split(',').map((o) => o.trim())
     : true;
+fastify.log.info({ origins: corsOrigin }, 'CORS configured');
 fastify.register(cors, { origin: corsOrigin });
 fastify.register(multipart, { limits: { fileSize: 10 * 1024 * 1024 } });
-fastify.register(swagger, {
-    openapi: {
-        info: { title: 'Frondly API', version: '0.0.1' }
-    }
-});
 
 // Dependencies
 fastify.register(dbConnector);
 fastify.register(services);
 
+if (process.env.NODE_ENV !== 'production') {
+    const { default: swagger } = await import('@fastify/swagger');
+    const { default: swaggerUi } = await import('@fastify/swagger-ui');
+    fastify.register(swagger, {
+        openapi: {
+            info: { title: 'Frondly API', version: '0.0.1' }
+        }
+    });
+    fastify.register(swaggerUi, { routePrefix: '/swagger' });
+}
+
 // Open routes
-fastify.register(swaggerUi, { routePrefix: '/swagger' });
 fastify.register(photosRoutes, { prefix: '/photos', context: 'serve' });
 
 // Authenticated Routes

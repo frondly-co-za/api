@@ -25,7 +25,8 @@ const mockSchedulesRepo: CareSchedulesRepository = {
     delete: vi.fn(),
 };
 
-const service = new CareLogsService(mockLogsRepo, mockSchedulesRepo);
+const mockLog = { debug: vi.fn(), warn: vi.fn(), info: vi.fn(), error: vi.fn() };
+const service = new CareLogsService(mockLogsRepo, mockSchedulesRepo, mockLog as never);
 
 beforeEach(() => vi.clearAllMocks());
 

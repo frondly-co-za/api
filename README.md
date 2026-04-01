@@ -14,7 +14,13 @@ AUTH0_DOMAIN=your-tenant.eu.auth0.com
 AUTH0_AUDIENCE=https://api.frondly.co.za
 CORS_ORIGIN=http://localhost:5173,https://frondly.co.za
 PHOTO_STORAGE_PATH=./uploads
+
+# optional
+LOG_LEVEL=info
+LOG_FILE=./logs/api.log
 ```
+
+`LOG_FILE` enables a rolling file sink alongside stdout (10 MB per file, 5 files retained). If omitted, logs go to stdout only. `LOG_LEVEL` defaults to `info`; set to `debug` to see internal service decisions (recurrence recomputation, care log validation, etc.).
 
 Install dependencies and start the development server:
 

@@ -1,11 +1,13 @@
 import { CareLog, CreateCareLogData, CareLogsRepository } from '$domain/care-log.js';
 import { CareSchedulesRepository } from '$domain/care-schedule.js';
 import { computeNextDue } from './next-due.js';
+import type { FastifyBaseLogger } from 'fastify';
 
 export class CareLogsService {
     constructor(
         private readonly careLogs: CareLogsRepository,
-        private readonly careSchedules: CareSchedulesRepository
+        private readonly careSchedules: CareSchedulesRepository,
+        private readonly log: FastifyBaseLogger
     ) {}
 
     getByPlantId(userId: string, plantId: string): Promise<CareLog[]> {
@@ -23,8 +25,17 @@ export class CareLogsService {
                 data.plantId,
                 data.scheduleId
             );
-            if (!schedule) return null;
-            if (schedule.careTypeId !== data.careTypeId) return null;
+            if (!schedule) {
+                this.log.debug({ scheduleId: data.scheduleId }, 'care log rejected: schedule not found');
+                return null;
+            }
+            if (schedule.careTypeId !== data.careTypeId) {
+                this.log.debug(
+                    { scheduleId: data.scheduleId, expected: schedule.careTypeId, got: data.careTypeId },
+                    'care log rejected: care type mismatch'
+                );
+                return null;
+            }
 
             const log = await this.careLogs.create(data);
 
@@ -37,6 +48,10 @@ export class CareLogsService {
             await this.careSchedules.update(data.userId, data.scheduleId, {
                 nextDue: nextDue.toISOString()
             });
+            this.log.debug(
+                { scheduleId: data.scheduleId, nextDue: nextDue.toISOString() },
+                'schedule nextDue advanced after care log'
+            );
 
             return log;
         }

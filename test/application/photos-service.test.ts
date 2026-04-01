@@ -54,7 +54,8 @@ const mockStorage: PhotoStorage = {
     createReadStream: vi.fn()
 };
 
-const service = new PhotosService(mockPhotosRepo, mockPlantsRepo, mockStorage);
+const mockLog = { debug: vi.fn(), warn: vi.fn(), info: vi.fn(), error: vi.fn() };
+const service = new PhotosService(mockPhotosRepo, mockPlantsRepo, mockStorage, mockLog as never);
 
 beforeEach(() => vi.clearAllMocks());
 

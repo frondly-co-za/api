@@ -17,7 +17,8 @@ const mockRepo: CareSchedulesRepository = {
     delete: vi.fn<(userId: string, id: string) => Promise<boolean>>(),
 };
 
-const service = new CareSchedulesService(mockRepo);
+const mockLog = { debug: vi.fn(), warn: vi.fn(), info: vi.fn(), error: vi.fn() };
+const service = new CareSchedulesService(mockRepo, mockLog as never);
 
 beforeEach(() => vi.clearAllMocks());
 

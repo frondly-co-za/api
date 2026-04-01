@@ -5,9 +5,13 @@ import {
     UpdateCareScheduleData
 } from '$domain/care-schedule.js';
 import { computeNextDue } from './next-due.js';
+import type { FastifyBaseLogger } from 'fastify';
 
 export class CareSchedulesService {
-    constructor(private readonly careSchedules: CareSchedulesRepository) {}
+    constructor(
+        private readonly careSchedules: CareSchedulesRepository,
+        private readonly log: FastifyBaseLogger
+    ) {}
 
     getByPlantId(userId: string, plantId: string): Promise<CareSchedule[]> {
         return this.careSchedules.findByPlantId(userId, plantId);
@@ -45,6 +49,10 @@ export class CareSchedulesService {
                 updated.dayOfWeek,
                 updated.dayOfMonth,
                 updated.months
+            );
+            this.log.debug(
+                { scheduleId: id, nextDue: nextDue.toISOString() },
+                'recurrence changed, recomputed nextDue'
             );
             return (
                 (await this.careSchedules.update(userId, id, { nextDue: nextDue.toISOString() })) ??

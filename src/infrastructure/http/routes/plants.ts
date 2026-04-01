@@ -86,6 +86,7 @@ const plantsRoutes: FastifyPluginCallback = (fastify, _opts, done) => {
                 request.params.plantId
             );
             if (!deleted) return reply.status(404).send();
+            request.log.info({ plantId: request.params.plantId }, 'plant deleted');
             return reply.status(204).send();
         }
     );

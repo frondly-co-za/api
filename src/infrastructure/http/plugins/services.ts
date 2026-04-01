@@ -36,15 +36,15 @@ function servicesPlugin(fastify: FastifyInstance) {
     fastify.decorate('usersRepository', new MongoUsersRepository(db));
     fastify.decorate('careTypesRepository', new MongoCareTypesRepository(db));
     const careSchedulesRepo = new MongoCareSchedulesRepository(db);
-    fastify.decorate('careSchedulesService', new CareSchedulesService(careSchedulesRepo));
+    fastify.decorate('careSchedulesService', new CareSchedulesService(careSchedulesRepo, fastify.log));
     fastify.decorate(
         'careLogsService',
-        new CareLogsService(new MongoCareLogsRepository(db), careSchedulesRepo)
+        new CareLogsService(new MongoCareLogsRepository(db), careSchedulesRepo, fastify.log)
     );
     const photosRepo = new MongoPhotosRepository(db);
     const photoStorage = new LocalPhotoStorage(process.env.PHOTO_STORAGE_PATH ?? './uploads');
     fastify.decorate('photosRepository', photosRepo);
-    fastify.decorate('photosService', new PhotosService(photosRepo, plantsRepo, photoStorage));
+    fastify.decorate('photosService', new PhotosService(photosRepo, plantsRepo, photoStorage, fastify.log));
 }
 
 export default fastifyPlugin(servicesPlugin);
