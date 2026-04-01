@@ -1,6 +1,8 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
+import helmet from '@fastify/helmet';
 import multipart from '@fastify/multipart';
+import rateLimit from '@fastify/rate-limit';
 import plantsRoutes from './routes/plants.js';
 import careTypesRoutes from './routes/care-types.js';
 import schedulesRoutes from './routes/schedules.js';
@@ -10,6 +12,7 @@ import services from './plugins/services.js';
 import auth from './plugins/auth.js';
 
 const fastify = Fastify({
+    trustProxy: true,
     logger: process.env.LOG_FILE
         ? {
               level: process.env.LOG_LEVEL ?? 'info',
@@ -34,9 +37,16 @@ const fastify = Fastify({
 // Infrastructure
 const corsOrigin = process.env.CORS_ORIGIN
     ? process.env.CORS_ORIGIN.split(',').map((o) => o.trim())
-    : true;
+    : false;
 fastify.log.info({ origins: corsOrigin }, 'CORS configured');
 fastify.register(cors, { origin: corsOrigin });
+fastify.register(helmet, {
+    crossOriginResourcePolicy: { policy: 'cross-origin' }
+});
+fastify.register(rateLimit, {
+    max: 100,
+    timeWindow: '1 minute'
+});
 fastify.register(multipart, { limits: { fileSize: 10 * 1024 * 1024 } });
 
 // Dependencies
