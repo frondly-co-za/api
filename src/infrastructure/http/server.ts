@@ -8,6 +8,7 @@ import careTypesRoutes from './routes/care-types.js';
 import schedulesRoutes from './routes/schedules.js';
 import photosRoutes from './routes/photos.js';
 import dbConnector from './plugins/db-connector.js';
+import dbIndexInit from './plugins/db-index-init.js';
 import services from './plugins/services.js';
 import auth from './plugins/auth.js';
 
@@ -54,6 +55,7 @@ fastify.register(multipart, {
 
 // Dependencies
 fastify.register(dbConnector);
+fastify.register(dbIndexInit);
 fastify.register(services);
 
 if (process.env.NODE_ENV !== 'production') {
