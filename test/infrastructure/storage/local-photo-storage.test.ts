@@ -3,7 +3,7 @@ import path from 'path';
 import os from 'os';
 import { mkdtemp, rm, access } from 'fs/promises';
 import sharp from 'sharp';
-import { LocalPhotoStorage } from '$infrastructure/storage/local-photo-storage.js';
+import { LocalPhotoStorage, InvalidImageError } from '$infrastructure/storage/local-photo-storage.js';
 
 const mockLog = { warn: vi.fn(), error: vi.fn(), info: vi.fn(), debug: vi.fn() };
 
@@ -59,10 +59,23 @@ describe('save', () => {
         expect(mockLog.warn).toHaveBeenCalledOnce();
     });
 
-    it('throws when the buffer is not a valid image', async () => {
+    it('throws InvalidImageError when the buffer is not a valid image', async () => {
         await expect(
             storage.save('user1/plant1/bad.webp', Buffer.from('this is not an image'))
-        ).rejects.toThrow();
+        ).rejects.toThrow(InvalidImageError);
+    });
+
+    it('throws InvalidImageError when the image exceeds the pixel limit', async () => {
+        // 5001×5000 = 25,005,000 pixels — just over the 25,000,000 limit
+        const oversizedBuffer = await sharp({
+            create: { width: 5001, height: 5000, channels: 3, background: { r: 128, g: 128, b: 128 } }
+        })
+            .jpeg({ quality: 1 })
+            .toBuffer();
+
+        await expect(
+            storage.save('user1/plant1/oversized.webp', oversizedBuffer)
+        ).rejects.toThrow(InvalidImageError);
     });
 });
 

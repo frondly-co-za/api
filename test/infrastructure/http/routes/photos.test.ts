@@ -8,6 +8,7 @@ import type { Photo, PhotosRepository } from '$domain/photo.js';
 import type { Plant, PlantsRepository } from '$domain/plant.js';
 import type { PhotosService } from '$application/photos-service.js';
 import type { User } from '$domain/user.js';
+import { InvalidImageError } from '$infrastructure/storage/local-photo-storage.js';
 
 const TEST_SECRET = 'test-signing-secret';
 beforeAll(() => { process.env.PHOTO_SIGNING_SECRET = TEST_SECRET; });
@@ -259,6 +260,37 @@ describe('POST /plants/:plantId/photos', () => {
 
         expect(res.statusCode).toBe(415);
         expect(mockPhotosService.uploadToPlant).not.toHaveBeenCalled();
+    });
+
+    it('returns 422 when the service rejects the image as invalid', async () => {
+        vi.mocked(mockPlantsRepository.findById).mockResolvedValue(plant);
+        vi.mocked(mockPhotosService.uploadToPlant).mockRejectedValue(
+            new InvalidImageError('Invalid or unsupported image content')
+        );
+
+        const res = await app.inject({
+            method: 'POST',
+            url: PLANT_BASE,
+            headers: { 'content-type': `multipart/form-data; boundary=${boundary}` },
+            payload: buildMultipartBody(boundary, 'photo.jpg', fakeFile)
+        });
+
+        expect(res.statusCode).toBe(422);
+        expect(res.json()).toMatchObject({ message: 'Invalid or unsupported image content' });
+    });
+
+    it('propagates non-image errors from the service as 500', async () => {
+        vi.mocked(mockPlantsRepository.findById).mockResolvedValue(plant);
+        vi.mocked(mockPhotosService.uploadToPlant).mockRejectedValue(new Error('disk full'));
+
+        const res = await app.inject({
+            method: 'POST',
+            url: PLANT_BASE,
+            headers: { 'content-type': `multipart/form-data; boundary=${boundary}` },
+            payload: buildMultipartBody(boundary, 'photo.jpg', fakeFile)
+        });
+
+        expect(res.statusCode).toBe(500);
     });
 
     it('returns 400 when no file is uploaded', async () => {

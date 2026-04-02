@@ -14,13 +14,15 @@ AUTH0_DOMAIN=your-tenant.eu.auth0.com
 AUTH0_AUDIENCE=https://api.frondly.co.za
 CORS_ORIGIN=http://localhost:5173,https://frondly.co.za
 PHOTO_STORAGE_PATH=./uploads
-# Used to sign photo URLs
 PHOTO_SIGNING_SECRET=replace-with-a-long-random-secret
 
-# optional
+# Optional
+TRUSTED_PROXY_IP=192.168.1.50
 LOG_LEVEL=info
 LOG_FILE=./logs/api.log
 ```
+
+`TRUSTED_PROXY_IP` should be set to the LAN IP (or CIDR) of the reverse proxy in production. When set, Fastify derives `request.ip` from `X-Forwarded-For` only for connections arriving from that address, so rate-limiting and IP logging cannot be spoofed by a client supplying their own forwarding headers. Leave unset in local development (no proxy in front of the API).
 
 `LOG_FILE` enables a rolling file sink alongside stdout (10 MB per file, 5 files retained). If omitted, logs go to stdout only. `LOG_LEVEL` defaults to `info`; set to `debug` to see internal service decisions (recurrence recomputation, care log validation, etc.).
 

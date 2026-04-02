@@ -6,6 +6,15 @@ import sharp from 'sharp';
 import { FastifyBaseLogger } from 'fastify';
 import { PhotoStorage } from '$domain/photo.js';
 
+const MAX_IMAGE_PIXELS = 25_000_000; // ~5000×5000
+
+export class InvalidImageError extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = 'InvalidImageError';
+    }
+}
+
 export class LocalPhotoStorage implements PhotoStorage {
     private readonly resolvedBase: string;
 
@@ -26,15 +35,24 @@ export class LocalPhotoStorage implements PhotoStorage {
     }
 
     async save(uri: string, buffer: Buffer): Promise<void> {
-        const metadata = await sharp(buffer).metadata();
+        let metadata: sharp.Metadata;
+        try {
+            metadata = await sharp(buffer, { limitInputPixels: MAX_IMAGE_PIXELS }).metadata();
+        } catch (err) {
+            this.log.warn({ uri, err }, 'Photo upload rejected: invalid or oversized image');
+            throw new InvalidImageError('Invalid or unsupported image content');
+        }
+
         if (!metadata.format) {
             this.log.warn({ uri }, 'Photo upload rejected: unrecognised image format');
-            throw new Error('Invalid image content');
+            throw new InvalidImageError('Invalid image content');
         }
 
         const fullPath = this.resolveSafe(uri);
         await mkdir(path.dirname(fullPath), { recursive: true });
-        await sharp(buffer).webp({ quality: 80 }).toFile(fullPath);
+        await sharp(buffer, { limitInputPixels: MAX_IMAGE_PIXELS })
+            .webp({ quality: 80 })
+            .toFile(fullPath);
     }
 
     async delete(uri: string): Promise<void> {

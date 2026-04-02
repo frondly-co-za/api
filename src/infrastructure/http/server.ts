@@ -12,7 +12,7 @@ import services from './plugins/services.js';
 import auth from './plugins/auth.js';
 
 const fastify = Fastify({
-    trustProxy: true,
+    trustProxy: process.env.TRUSTED_PROXY_IP ?? false,
     ajv: { customOptions: { removeAdditional: false } },
     logger: process.env.LOG_FILE
         ? {
@@ -48,7 +48,9 @@ fastify.register(rateLimit, {
     max: 100,
     timeWindow: '1 minute'
 });
-fastify.register(multipart, { limits: { fileSize: 10 * 1024 * 1024 } });
+fastify.register(multipart, {
+    limits: { fileSize: 10 * 1024 * 1024, files: 1, fields: 10, parts: 12 }
+});
 
 // Dependencies
 fastify.register(dbConnector);

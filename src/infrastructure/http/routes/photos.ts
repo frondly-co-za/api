@@ -3,6 +3,7 @@ import { FastifyPluginCallback } from 'fastify';
 import { Photo, PhotoSchema } from '$domain/photo.js';
 import { OID } from './oid.js';
 import { signPhotoUrl, verifyPhotoSignature } from '$infrastructure/http/signing/photo-url.js';
+import { InvalidImageError } from '$infrastructure/storage/local-photo-storage.js';
 
 const PhotoResponse = Type.Object({
     ...Type.Omit(PhotoSchema, ['uri']).properties,
@@ -75,17 +76,25 @@ const photosRoutes: FastifyPluginCallback<PhotosOptions> = (fastify, opts, done)
                 const takenAt = takenAtField?.type === 'field' ? String(takenAtField.value) : null;
 
                 const buffer = await file.toBuffer();
-                const photo = await fastify.photosService.uploadToPlant(
-                    {
-                        userId,
-                        plantId,
-                        buffer,
-                        filename: file.filename || null,
-                        takenAt,
-                        setAsCover: request.query.setAsCover
-                    },
-                    request.log
-                );
+                let photo;
+                try {
+                    photo = await fastify.photosService.uploadToPlant(
+                        {
+                            userId,
+                            plantId,
+                            buffer,
+                            filename: file.filename || null,
+                            takenAt,
+                            setAsCover: request.query.setAsCover
+                        },
+                        request.log
+                    );
+                } catch (err) {
+                    if (err instanceof InvalidImageError) {
+                        return reply.status(422).send({ message: err.message });
+                    }
+                    throw err;
+                }
 
                 const servePrefix = opts.servePrefix ?? '/photos';
                 return reply
