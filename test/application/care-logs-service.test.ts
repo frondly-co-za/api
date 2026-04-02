@@ -21,7 +21,7 @@ const mockSchedulesRepo: CareSchedulesRepository = {
     findDue: vi.fn(),
     findById: vi.fn<(userId: string, plantId: string, id: string) => Promise<CareSchedule | null>>(),
     create: vi.fn(),
-    update: vi.fn<(userId: string, id: string, data: object) => Promise<CareSchedule | null>>(),
+    update: vi.fn<(userId: string, plantId: string, id: string, data: object) => Promise<CareSchedule | null>>(),
     delete: vi.fn(),
 };
 
@@ -126,7 +126,7 @@ describe('create (scheduled)', () => {
             expect.objectContaining({ careTypeId, scheduleId })
         );
         expect(computeNextDue).toHaveBeenCalledOnce();
-        expect(mockSchedulesRepo.update).toHaveBeenCalledExactlyOnceWith(userId, scheduleId, {
+        expect(mockSchedulesRepo.update).toHaveBeenCalledExactlyOnceWith(userId, plantId, scheduleId, {
             nextDue: '2026-04-07T00:00:00.000Z'
         });
     });

@@ -98,6 +98,7 @@ export class MongoCareSchedulesRepository implements CareSchedulesRepository {
 
     async update(
         userId: string,
+        plantId: string,
         id: string,
         data: UpdateCareScheduleData
     ): Promise<CareSchedule | null> {
@@ -112,17 +113,18 @@ export class MongoCareSchedulesRepository implements CareSchedulesRepository {
         if (data.nextDue !== undefined) $set.nextDue = new Date(data.nextDue);
 
         const result = await this.collection.findOneAndUpdate(
-            { _id: new ObjectId(id), userId: new ObjectId(userId) },
+            { _id: new ObjectId(id), userId: new ObjectId(userId), plantId: new ObjectId(plantId) },
             { $set },
             { returnDocument: 'after' }
         );
         return result ? this.toCareSchedule(result) : null;
     }
 
-    async delete(userId: string, id: string): Promise<boolean> {
+    async delete(userId: string, plantId: string, id: string): Promise<boolean> {
         const result = await this.collection.deleteOne({
             _id: new ObjectId(id),
-            userId: new ObjectId(userId)
+            userId: new ObjectId(userId),
+            plantId: new ObjectId(plantId)
         });
         return result.deletedCount > 0;
     }

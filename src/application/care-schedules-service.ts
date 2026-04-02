@@ -32,12 +32,13 @@ export class CareSchedulesService {
 
     async update(
         userId: string,
+        plantId: string,
         id: string,
         data: UpdateCareScheduleData,
         log?: Logger
     ): Promise<CareSchedule | null> {
         const logger = log ?? this.log;
-        const updated = await this.careSchedules.update(userId, id, data);
+        const updated = await this.careSchedules.update(userId, plantId, id, data);
         if (!updated) return null;
 
         const recurrenceChanged =
@@ -57,15 +58,16 @@ export class CareSchedulesService {
                 'recurrence changed, recomputed nextDue'
             );
             return (
-                (await this.careSchedules.update(userId, id, { nextDue: nextDue.toISOString() })) ??
-                updated
+                (await this.careSchedules.update(userId, plantId, id, {
+                    nextDue: nextDue.toISOString()
+                })) ?? updated
             );
         }
 
         return updated;
     }
 
-    delete(userId: string, id: string): Promise<boolean> {
-        return this.careSchedules.delete(userId, id);
+    delete(userId: string, plantId: string, id: string): Promise<boolean> {
+        return this.careSchedules.delete(userId, plantId, id);
     }
 }

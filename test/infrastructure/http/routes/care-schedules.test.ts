@@ -25,8 +25,8 @@ function buildApp() {
         getByPlantId: vi.fn<(userId: string, plantId: string) => Promise<CareSchedule[]>>(),
         getById: vi.fn<(userId: string, plantId: string, id: string) => Promise<CareSchedule | null>>(),
         create: vi.fn<(data: object) => Promise<CareSchedule>>(),
-        update: vi.fn<(userId: string, id: string, data: object) => Promise<CareSchedule | null>>(),
-        delete: vi.fn<(userId: string, id: string) => Promise<boolean>>(),
+        update: vi.fn<(userId: string, plantId: string, id: string, data: object) => Promise<CareSchedule | null>>(),
+        delete: vi.fn<(userId: string, plantId: string, id: string) => Promise<boolean>>(),
         getDue: vi.fn(),
     };
 
@@ -155,6 +155,8 @@ describe('POST /plants/:plantId/schedules', () => {
     });
 });
 
+const otherPlantId = '507f1f77bcf86cd799439099';
+
 describe('PATCH /plants/:plantId/schedules/:scheduleId', () => {
     const { app, mockCareSchedulesService } = buildApp();
     afterAll(() => app.close());
@@ -174,16 +176,41 @@ describe('PATCH /plants/:plantId/schedules/:scheduleId', () => {
         expect(res.json()).toEqual(updated);
     });
 
-    it('returns 404 when not found', async () => {
-        mockCareSchedulesService.update.mockResolvedValue(null);
+    it('passes plantId from route params to the service', async () => {
+        mockCareSchedulesService.update.mockResolvedValue(schedule);
 
-        const res = await app.inject({
+        await app.inject({
             method: 'PATCH',
             url: `${BASE}/${schedule.id}`,
             payload: { notes: 'updated' },
         });
 
+        expect(mockCareSchedulesService.update).toHaveBeenCalledWith(
+            testUser.id,
+            plantId,
+            schedule.id,
+            expect.any(Object),
+            expect.anything()
+        );
+    });
+
+    it('returns 404 when not found (BOLA: schedule belongs to a different plant)', async () => {
+        mockCareSchedulesService.update.mockResolvedValue(null);
+
+        const res = await app.inject({
+            method: 'PATCH',
+            url: `/plants/${otherPlantId}/schedules/${schedule.id}`,
+            payload: { notes: 'updated' },
+        });
+
         expect(res.statusCode).toBe(404);
+        expect(mockCareSchedulesService.update).toHaveBeenCalledWith(
+            testUser.id,
+            otherPlantId,
+            schedule.id,
+            expect.any(Object),
+            expect.anything()
+        );
     });
 });
 
@@ -200,11 +227,31 @@ describe('DELETE /plants/:plantId/schedules/:scheduleId', () => {
         expect(res.statusCode).toBe(204);
     });
 
-    it('returns 404 when not found', async () => {
+    it('passes plantId from route params to the service', async () => {
+        mockCareSchedulesService.delete.mockResolvedValue(true);
+
+        await app.inject({ method: 'DELETE', url: `${BASE}/${schedule.id}` });
+
+        expect(mockCareSchedulesService.delete).toHaveBeenCalledWith(
+            testUser.id,
+            plantId,
+            schedule.id
+        );
+    });
+
+    it('returns 404 when not found (BOLA: schedule belongs to a different plant)', async () => {
         mockCareSchedulesService.delete.mockResolvedValue(false);
 
-        const res = await app.inject({ method: 'DELETE', url: `${BASE}/${schedule.id}` });
+        const res = await app.inject({
+            method: 'DELETE',
+            url: `/plants/${otherPlantId}/schedules/${schedule.id}`,
+        });
 
         expect(res.statusCode).toBe(404);
+        expect(mockCareSchedulesService.delete).toHaveBeenCalledWith(
+            testUser.id,
+            otherPlantId,
+            schedule.id
+        );
     });
 });

@@ -104,6 +104,7 @@ const careSchedulesRoutes: FastifyPluginCallback = (fastify, _opts, done) => {
         async (request, reply) => {
             const schedule = await fastify.careSchedulesService.update(
                 request.user!.id,
+                request.params.plantId,
                 request.params.scheduleId,
                 request.body,
                 request.log
@@ -119,6 +120,7 @@ const careSchedulesRoutes: FastifyPluginCallback = (fastify, _opts, done) => {
         async (request, reply) => {
             const deleted = await fastify.careSchedulesService.delete(
                 request.user!.id,
+                request.params.plantId,
                 request.params.scheduleId
             );
             if (!deleted) return reply.status(404).send();

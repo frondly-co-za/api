@@ -58,6 +58,11 @@ export interface CareSchedulesRepository {
     findDue(userId: string, asOf: string): Promise<CareSchedule[]>; // nextDue <= asOf
     findById(userId: string, plantId: string, id: string): Promise<CareSchedule | null>;
     create(data: CreateCareScheduleData): Promise<CareSchedule>;
-    update(userId: string, id: string, data: UpdateCareScheduleData): Promise<CareSchedule | null>;
-    delete(userId: string, id: string): Promise<boolean>;
+    update(
+        userId: string,
+        plantId: string,
+        id: string,
+        data: UpdateCareScheduleData
+    ): Promise<CareSchedule | null>;
+    delete(userId: string, plantId: string, id: string): Promise<boolean>;
 }

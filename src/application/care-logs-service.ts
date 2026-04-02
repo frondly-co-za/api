@@ -53,7 +53,7 @@ export class CareLogsService {
                 schedule.dayOfMonth,
                 schedule.months
             );
-            await this.careSchedules.update(data.userId, data.scheduleId, {
+            await this.careSchedules.update(data.userId, data.plantId, data.scheduleId, {
                 nextDue: nextDue.toISOString()
             });
             logger.debug(

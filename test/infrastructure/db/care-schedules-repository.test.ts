@@ -63,7 +63,7 @@ describe('update', () => {
     it("updates the schedule's fields and returns it", async () => {
         const created = await createSchedule();
 
-        const updated = await repo.update(userId, created.id, { notes: 'weekly', dayOfWeek: [5] });
+        const updated = await repo.update(userId, plantId, created.id, { notes: 'weekly', dayOfWeek: [5] });
 
         expect(updated).not.toBeNull();
         expect(updated!.notes).toBe('weekly');
@@ -74,7 +74,7 @@ describe('update', () => {
     it('updates nextDue and isActive', async () => {
         const created = await createSchedule();
 
-        const updated = await repo.update(userId, created.id, {
+        const updated = await repo.update(userId, plantId, created.id, {
             nextDue: '2026-05-01T00:00:00.000Z',
             isActive: false,
         });
@@ -84,14 +84,21 @@ describe('update', () => {
     });
 
     it('returns null for an unknown id', async () => {
-        expect(await repo.update(userId, new ObjectId().toHexString(), { notes: 'x' })).toBeNull();
+        expect(await repo.update(userId, plantId, new ObjectId().toHexString(), { notes: 'x' })).toBeNull();
     });
 
     it("returns null when trying to update another user's schedule", async () => {
         const created = await createSchedule();
         const otherUserId = new ObjectId().toHexString();
 
-        expect(await repo.update(otherUserId, created.id, { notes: 'x' })).toBeNull();
+        expect(await repo.update(otherUserId, plantId, created.id, { notes: 'x' })).toBeNull();
+    });
+
+    it('returns null when plantId does not match', async () => {
+        const created = await createSchedule();
+        const otherPlantId = new ObjectId().toHexString();
+
+        expect(await repo.update(userId, otherPlantId, created.id, { notes: 'x' })).toBeNull();
     });
 });
 
@@ -141,7 +148,7 @@ describe('findDue', () => {
 
     it('does not return inactive schedules', async () => {
         const created = await createSchedule({ nextDue: '2026-04-01T00:00:00.000Z' });
-        await repo.update(userId, created.id, { isActive: false });
+        await repo.update(userId, plantId, created.id, { isActive: false });
 
         expect(await repo.findDue(userId, '2026-04-07T00:00:00.000Z')).toEqual([]);
     });
@@ -184,18 +191,26 @@ describe('delete', () => {
     it('deletes the schedule and returns true', async () => {
         const created = await createSchedule();
 
-        expect(await repo.delete(userId, created.id)).toBe(true);
+        expect(await repo.delete(userId, plantId, created.id)).toBe(true);
         expect(await repo.findById(userId, plantId, created.id)).toBeNull();
     });
 
     it('returns false for an unknown id', async () => {
-        expect(await repo.delete(userId, new ObjectId().toHexString())).toBe(false);
+        expect(await repo.delete(userId, plantId, new ObjectId().toHexString())).toBe(false);
     });
 
     it("returns false when trying to delete another user's schedule", async () => {
         const created = await createSchedule();
         const otherUserId = new ObjectId().toHexString();
 
-        expect(await repo.delete(otherUserId, created.id)).toBe(false);
+        expect(await repo.delete(otherUserId, plantId, created.id)).toBe(false);
+    });
+
+    it('returns false when plantId does not match', async () => {
+        const created = await createSchedule();
+        const otherPlantId = new ObjectId().toHexString();
+
+        expect(await repo.delete(userId, otherPlantId, created.id)).toBe(false);
+        expect(await repo.findById(userId, plantId, created.id)).not.toBeNull();
     });
 });
