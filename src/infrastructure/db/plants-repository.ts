@@ -66,17 +66,14 @@ export class MongoPlantsRepository implements PlantsRepository {
     }
 
     async update(userId: string, id: string, data: UpdatePlantData): Promise<Plant | null> {
-        const { acquiredAt, coverPhotoId, ...rest } = data;
-        const $set: Partial<PlantDocument> & { updatedAt: Date } = {
-            ...rest,
-            updatedAt: new Date()
-        };
-        if (acquiredAt !== undefined) {
-            $set.acquiredAt = acquiredAt ? new Date(acquiredAt) : null;
-        }
-        if (coverPhotoId !== undefined) {
-            $set.coverPhotoId = coverPhotoId ? new ObjectId(coverPhotoId) : null;
-        }
+        const $set: Partial<PlantDocument> & { updatedAt: Date } = { updatedAt: new Date() };
+        if (data.name !== undefined) $set.name = data.name;
+        if (data.description !== undefined) $set.description = data.description;
+        if (data.notes !== undefined) $set.notes = data.notes;
+        if (data.acquiredAt !== undefined)
+            $set.acquiredAt = data.acquiredAt ? new Date(data.acquiredAt) : null;
+        if (data.coverPhotoId !== undefined)
+            $set.coverPhotoId = data.coverPhotoId ? new ObjectId(data.coverPhotoId) : null;
         const result = await this.collection.findOneAndUpdate(
             { _id: new ObjectId(id), userId: new ObjectId(userId) },
             { $set },

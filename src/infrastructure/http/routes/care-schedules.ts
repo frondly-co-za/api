@@ -17,22 +17,28 @@ const PlantScheduleParams = Type.Object({
 type PlantScheduleParams = Static<typeof PlantScheduleParams>;
 
 // nextDue is computed by the service; careTypeId is re-added with OID constraint
-const UpdateScheduleBody = Type.Object({
-    ...Type.Omit(UpdateCareScheduleDataSchema, ['nextDue', 'careTypeId']).properties,
-    careTypeId: Type.Optional(Type.String(OID))
-});
+const UpdateScheduleBody = Type.Object(
+    {
+        ...Type.Omit(UpdateCareScheduleDataSchema, ['nextDue', 'careTypeId']).properties,
+        careTypeId: Type.Optional(Type.String(OID))
+    },
+    { additionalProperties: false }
+);
 type UpdateScheduleBody = Static<typeof UpdateScheduleBody>;
 
 const { selectedOption, notes, dayOfWeek, dayOfMonth, months } =
     CreateCareScheduleDataSchema.properties;
-const CreateScheduleBody = Type.Object({
-    careTypeId: Type.String(OID),
-    selectedOption: Type.Optional(selectedOption),
-    notes: Type.Optional(notes),
-    dayOfWeek: Type.Optional(dayOfWeek),
-    dayOfMonth: Type.Optional(dayOfMonth),
-    months: Type.Optional(months)
-});
+const CreateScheduleBody = Type.Object(
+    {
+        careTypeId: Type.String(OID),
+        selectedOption: Type.Optional(selectedOption),
+        notes: Type.Optional(notes),
+        dayOfWeek: Type.Optional(dayOfWeek),
+        dayOfMonth: Type.Optional(dayOfMonth),
+        months: Type.Optional(months)
+    },
+    { additionalProperties: false }
+);
 type CreateScheduleBody = Static<typeof CreateScheduleBody>;
 
 const careSchedulesRoutes: FastifyPluginCallback = (fastify, _opts, done) => {

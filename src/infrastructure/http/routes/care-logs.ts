@@ -5,13 +5,16 @@ import { OID } from './oid.js';
 
 // careTypeId and scheduleId need OID constraints; scheduleId changes from string|null to optional string
 const { selectedOption, notes, performedAt } = CreateCareLogDataSchema.properties;
-const LogBody = Type.Object({
-    careTypeId: Type.String(OID),
-    scheduleId: Type.Optional(Type.String(OID)),
-    selectedOption: Type.Optional(selectedOption),
-    notes: Type.Optional(notes),
-    performedAt: Type.Optional(performedAt)
-});
+const LogBody = Type.Object(
+    {
+        careTypeId: Type.String(OID),
+        scheduleId: Type.Optional(Type.String(OID)),
+        selectedOption: Type.Optional(selectedOption),
+        notes: Type.Optional(notes),
+        performedAt: Type.Optional(performedAt)
+    },
+    { additionalProperties: false }
+);
 type LogBody = Static<typeof LogBody>;
 
 const LogParams = Type.Object({ plantId: Type.String(OID) });

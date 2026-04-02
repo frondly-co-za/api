@@ -64,9 +64,12 @@ export class MongoCareTypesRepository implements CareTypesRepository {
     }
 
     async update(userId: string, id: string, data: UpdateCareTypeData): Promise<CareType | null> {
+        const $set: Partial<CareTypeDocument> & { updatedAt: Date } = { updatedAt: new Date() };
+        if (data.name !== undefined) $set.name = data.name;
+        if (data.options !== undefined) $set.options = data.options;
         const result = await this.collection.findOneAndUpdate(
             { _id: new ObjectId(id), userId: new ObjectId(userId) },
-            { $set: { ...data, updatedAt: new Date() } },
+            { $set },
             { returnDocument: 'after' }
         );
         return result ? this.toCareType(result) : null;

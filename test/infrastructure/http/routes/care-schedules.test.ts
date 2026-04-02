@@ -19,7 +19,7 @@ const plantId = '507f1f77bcf86cd799439013';
 const BASE = `/plants/${plantId}/schedules`;
 
 function buildApp() {
-    const app = Fastify({ logger: false });
+    const app = Fastify({ logger: false, ajv: { customOptions: { removeAdditional: false } } });
 
     const mockCareSchedulesService = {
         getByPlantId: vi.fn<(userId: string, plantId: string) => Promise<CareSchedule[]>>(),
@@ -153,6 +153,17 @@ describe('POST /plants/:plantId/schedules', () => {
         expect(res.statusCode).toBe(400);
         expect(mockCareSchedulesService.create).not.toHaveBeenCalled();
     });
+
+    it('returns 400 when body contains unknown fields', async () => {
+        const res = await app.inject({
+            method: 'POST',
+            url: BASE,
+            payload: { careTypeId: schedule.careTypeId, userId: 'injected', createdAt: '2020-01-01T00:00:00.000Z' },
+        });
+
+        expect(res.statusCode).toBe(400);
+        expect(mockCareSchedulesService.create).not.toHaveBeenCalled();
+    });
 });
 
 const otherPlantId = '507f1f77bcf86cd799439099';
@@ -211,6 +222,28 @@ describe('PATCH /plants/:plantId/schedules/:scheduleId', () => {
             expect.any(Object),
             expect.anything()
         );
+    });
+
+    it('returns 400 when body contains unknown fields', async () => {
+        const res = await app.inject({
+            method: 'PATCH',
+            url: `${BASE}/${schedule.id}`,
+            payload: { notes: 'updated', userId: 'injected', plantId: 'injected' },
+        });
+
+        expect(res.statusCode).toBe(400);
+        expect(mockCareSchedulesService.update).not.toHaveBeenCalled();
+    });
+
+    it('returns 400 when nextDue is sent directly (computed field)', async () => {
+        const res = await app.inject({
+            method: 'PATCH',
+            url: `${BASE}/${schedule.id}`,
+            payload: { nextDue: '2030-01-01T00:00:00.000Z' },
+        });
+
+        expect(res.statusCode).toBe(400);
+        expect(mockCareSchedulesService.update).not.toHaveBeenCalled();
     });
 });
 

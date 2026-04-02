@@ -8,16 +8,21 @@ import careLogsRoutes from './care-logs.js';
 import photosRoutes from './photos.js';
 
 // coverPhotoId is set via the dedicated /cover endpoint, not in a general update
-const UpdatePlantBody = Type.Omit(UpdatePlantDataSchema, ['coverPhotoId']);
+const UpdatePlantBody = Type.Object(Type.Omit(UpdatePlantDataSchema, ['coverPhotoId']).properties, {
+    additionalProperties: false
+});
 type UpdatePlantBody = Static<typeof UpdatePlantBody>;
 
 const { name, description, acquiredAt, notes } = CreatePlantDataSchema.properties;
-const CreatePlantBody = Type.Object({
-    name,
-    description: Type.Optional(description),
-    acquiredAt: Type.Optional(acquiredAt),
-    notes: Type.Optional(notes)
-});
+const CreatePlantBody = Type.Object(
+    {
+        name,
+        description: Type.Optional(description),
+        acquiredAt: Type.Optional(acquiredAt),
+        notes: Type.Optional(notes)
+    },
+    { additionalProperties: false }
+);
 type CreatePlantBody = Static<typeof CreatePlantBody>;
 
 const PlantResponse = Type.Object({
@@ -34,7 +39,7 @@ function withCoverUrl(plant: Plant): PlantResponse {
     };
 }
 
-const SetCoverBody = Type.Object({ photoId: Type.String(OID) });
+const SetCoverBody = Type.Object({ photoId: Type.String(OID) }, { additionalProperties: false });
 type SetCoverBody = Static<typeof SetCoverBody>;
 
 const PlantParams = Type.Object({ plantId: Type.String(OID) });
@@ -88,10 +93,11 @@ const plantsRoutes: FastifyPluginCallback = (fastify, _opts, done) => {
             schema: { params: PlantParams, body: UpdatePlantBody, response: { 200: PlantResponse } }
         },
         async (request, reply) => {
+            const { name, description, acquiredAt, notes } = request.body;
             const plant = await fastify.plantsRepository.update(
                 request.user!.id,
                 request.params.plantId,
-                request.body
+                { name, description, acquiredAt, notes }
             );
             if (!plant) return reply.status(404).send();
             return withCoverUrl(plant);

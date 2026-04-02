@@ -101,7 +101,7 @@ function buildMultipartBody(boundary: string, filename: string, fileContent: Buf
 // --- 'plant' context ---
 
 function buildPlantApp() {
-    const app = Fastify({ logger: false });
+    const app = Fastify({ logger: false, ajv: { customOptions: { removeAdditional: false } } });
     const mockPhotosService = buildMockService();
     const mockPlantsRepository = buildMockPlantsRepo();
     const mockPhotosRepository = buildMockPhotosRepo();
@@ -280,7 +280,7 @@ describe('POST /plants/:plantId/photos', () => {
 // --- 'serve' context ---
 
 function buildServeApp() {
-    const app = Fastify({ logger: false });
+    const app = Fastify({ logger: false, ajv: { customOptions: { removeAdditional: false } } });
     const mockPhotosService = buildMockService();
     app.decorate('photosService', mockPhotosService as never);
     app.register(photosRoutes, { prefix: '/photos', context: 'serve' });
@@ -350,7 +350,7 @@ describe('GET /photos/:photoId', () => {
 // --- 'manage' context ---
 
 function buildManageApp() {
-    const app = Fastify({ logger: false });
+    const app = Fastify({ logger: false, ajv: { customOptions: { removeAdditional: false } } });
     const mockPhotosService = buildMockService();
     const mockPhotosRepository = buildMockPhotosRepo();
     app.decorateRequest('user', null);

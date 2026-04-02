@@ -25,7 +25,7 @@ const testUser: User = {
  * request.user is set via a preHandler, mirroring what the real auth plugin does.
  */
 function buildApp() {
-    const app = Fastify({ logger: false });
+    const app = Fastify({ logger: false, ajv: { customOptions: { removeAdditional: false } } });
 
     const mockPlantsRepository: PlantsRepository = {
         findAll: vi.fn<(userId: string) => Promise<Plant[]>>(),
@@ -141,6 +141,23 @@ describe('GET /plants/:plantId', () => {
     });
 });
 
+describe('POST /plants — mass-assignment rejection', () => {
+    const { app, mockPlantsRepository } = buildApp();
+    afterAll(() => app.close());
+    beforeEach(() => vi.clearAllMocks());
+
+    it('returns 400 when body contains unknown fields', async () => {
+        const res = await app.inject({
+            method: 'POST',
+            url: '/plants',
+            payload: { name: 'Cactus', userId: 'injected', createdAt: '2020-01-01T00:00:00.000Z' },
+        });
+
+        expect(res.statusCode).toBe(400);
+        expect(mockPlantsRepository.create).not.toHaveBeenCalled();
+    });
+});
+
 describe('PATCH /plants/:plantId', () => {
     const { app, mockPlantsRepository } = buildApp();
     afterAll(() => app.close());
@@ -193,6 +210,50 @@ describe('PATCH /plants/:plantId', () => {
             method: 'PATCH',
             url: '/plants/507f1f77bcf86cd799439011',
             payload: { notes: 'a'.repeat(1001) },
+        });
+
+        expect(res.statusCode).toBe(400);
+        expect(mockPlantsRepository.update).not.toHaveBeenCalled();
+    });
+
+    it('returns 400 when body contains unknown fields', async () => {
+        const res = await app.inject({
+            method: 'PATCH',
+            url: '/plants/507f1f77bcf86cd799439011',
+            payload: { name: 'Cactus', unknownField: 'value' },
+        });
+
+        expect(res.statusCode).toBe(400);
+        expect(mockPlantsRepository.update).not.toHaveBeenCalled();
+    });
+
+    it('returns 400 when coverPhotoId is sent (protected — use /cover endpoint)', async () => {
+        const res = await app.inject({
+            method: 'PATCH',
+            url: '/plants/507f1f77bcf86cd799439011',
+            payload: { coverPhotoId: '507f1f77bcf86cd799439099' },
+        });
+
+        expect(res.statusCode).toBe(400);
+        expect(mockPlantsRepository.update).not.toHaveBeenCalled();
+    });
+
+    it('returns 400 when userId is sent (protected field)', async () => {
+        const res = await app.inject({
+            method: 'PATCH',
+            url: '/plants/507f1f77bcf86cd799439011',
+            payload: { userId: 'injected' },
+        });
+
+        expect(res.statusCode).toBe(400);
+        expect(mockPlantsRepository.update).not.toHaveBeenCalled();
+    });
+
+    it('returns 400 when createdAt is sent (protected field)', async () => {
+        const res = await app.inject({
+            method: 'PATCH',
+            url: '/plants/507f1f77bcf86cd799439011',
+            payload: { createdAt: '2020-01-01T00:00:00.000Z' },
         });
 
         expect(res.statusCode).toBe(400);

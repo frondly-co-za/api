@@ -10,11 +10,16 @@ import { OID } from './oid.js';
 const IdParams = Type.Object({ typeId: Type.String(OID) });
 type IdParams = Static<typeof IdParams>;
 
-const UpdateCareTypeBody = UpdateCareTypeDataSchema;
+const UpdateCareTypeBody = Type.Object(UpdateCareTypeDataSchema.properties, {
+    additionalProperties: false
+});
 type UpdateCareTypeBody = Static<typeof UpdateCareTypeBody>;
 
 const { name, options } = CreateCareTypeDataSchema.properties;
-const CreateCareTypeBody = Type.Object({ name, options: Type.Optional(options) });
+const CreateCareTypeBody = Type.Object(
+    { name, options: Type.Optional(options) },
+    { additionalProperties: false }
+);
 type CreateCareTypeBody = Static<typeof CreateCareTypeBody>;
 
 const careTypesRoutes: FastifyPluginCallback = (fastify, _opts, done) => {
@@ -66,10 +71,11 @@ const careTypesRoutes: FastifyPluginCallback = (fastify, _opts, done) => {
             }
         },
         async (request, reply) => {
+            const { name, options } = request.body;
             const careType = await fastify.careTypesRepository.update(
                 request.user!.id,
                 request.params.typeId,
-                request.body
+                { name, options }
             );
             if (!careType) return reply.status(404).send();
             return careType;

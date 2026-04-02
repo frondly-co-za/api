@@ -31,7 +31,7 @@ const schedule: CareSchedule = {
 };
 
 function buildApp() {
-    const app = Fastify({ logger: false });
+    const app = Fastify({ logger: false, ajv: { customOptions: { removeAdditional: false } } });
 
     const mockCareSchedulesService = {
         getDue: vi.fn<(userId: string, asOf: string) => Promise<CareSchedule[]>>(),

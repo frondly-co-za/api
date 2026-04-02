@@ -13,6 +13,7 @@ import auth from './plugins/auth.js';
 
 const fastify = Fastify({
     trustProxy: true,
+    ajv: { customOptions: { removeAdditional: false } },
     logger: process.env.LOG_FILE
         ? {
               level: process.env.LOG_LEVEL ?? 'info',

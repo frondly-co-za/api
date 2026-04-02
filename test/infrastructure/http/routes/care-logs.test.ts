@@ -19,7 +19,7 @@ const scheduleId = '507f1f77bcf86cd799439015';
 const BASE = `/plants/${plantId}/logs`;
 
 function buildApp() {
-    const app = Fastify({ logger: false });
+    const app = Fastify({ logger: false, ajv: { customOptions: { removeAdditional: false } } });
     const mockCareLogsService = {
         getByPlantId: vi.fn<(userId: string, plantId: string) => Promise<CareLog[]>>(),
         getById: vi.fn<(userId: string, plantId: string, id: string) => Promise<CareLog | null>>(),
@@ -153,6 +153,17 @@ describe('POST /plants/:plantId/logs', () => {
         });
 
         expect(res.statusCode).toBe(404);
+    });
+
+    it('returns 400 when body contains unknown fields', async () => {
+        const res = await app.inject({
+            method: 'POST',
+            url: BASE,
+            payload: { careTypeId: log.careTypeId, userId: 'injected', createdAt: '2020-01-01T00:00:00.000Z' }
+        });
+
+        expect(res.statusCode).toBe(400);
+        expect(mockCareLogsService.create).not.toHaveBeenCalled();
     });
 });
 

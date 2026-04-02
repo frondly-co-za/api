@@ -15,7 +15,7 @@ const testUser: User = {
 };
 
 function buildApp() {
-    const app = Fastify({ logger: false });
+    const app = Fastify({ logger: false, ajv: { customOptions: { removeAdditional: false } } });
 
     const mockCareTypesRepository: CareTypesRepository = {
         findAll: vi.fn<(userId: string) => Promise<CareType[]>>(),
@@ -123,6 +123,17 @@ describe('POST /care-types', () => {
         expect(res.statusCode).toBe(400);
         expect(mockCareTypesRepository.create).not.toHaveBeenCalled();
     });
+
+    it('returns 400 when body contains unknown fields', async () => {
+        const res = await app.inject({
+            method: 'POST',
+            url: '/care-types',
+            payload: { name: 'Watering', userId: 'injected', createdAt: '2020-01-01T00:00:00.000Z' },
+        });
+
+        expect(res.statusCode).toBe(400);
+        expect(mockCareTypesRepository.create).not.toHaveBeenCalled();
+    });
 });
 
 describe('PATCH /care-types/:typeId', () => {
@@ -154,6 +165,17 @@ describe('PATCH /care-types/:typeId', () => {
         });
 
         expect(res.statusCode).toBe(404);
+    });
+
+    it('returns 400 when body contains unknown fields', async () => {
+        const res = await app.inject({
+            method: 'PATCH',
+            url: `/care-types/${careType.id}`,
+            payload: { name: 'Fertilising', userId: 'injected', createdAt: '2020-01-01T00:00:00.000Z' },
+        });
+
+        expect(res.statusCode).toBe(400);
+        expect(mockCareTypesRepository.update).not.toHaveBeenCalled();
     });
 });
 

@@ -104,8 +104,9 @@ describe('findAllByPlant', () => {
         expect(await repo.findAllByPlant(userId, plantId)).toEqual([]);
     });
 
-    it('returns all photos for the given plant in descending order', async () => {
+    it('returns all photos for the given plant in descending createdAt order', async () => {
         const first = await createPhoto();
+        await new Promise((r) => setTimeout(r, 10));
         const second = await createPhoto();
 
         const photos = await repo.findAllByPlant(userId, plantId);
