@@ -21,7 +21,10 @@ type PhotoParams = Static<typeof PhotoParams>;
 const PlantPhotoParams = Type.Object({ plantId: Type.String(OID) });
 type PlantPhotoParams = Static<typeof PlantPhotoParams>;
 
-const PlantPhotoQuery = Type.Object({ setAsCover: Type.Optional(Type.Boolean()) });
+const PlantPhotoQuery = Type.Object(
+    { setAsCover: Type.Optional(Type.Boolean()) },
+    { additionalProperties: false }
+);
 type PlantPhotoQuery = Static<typeof PlantPhotoQuery>;
 
 export type PhotosContext = 'plant' | 'serve' | 'manage';
@@ -106,10 +109,10 @@ const photosRoutes: FastifyPluginCallback<PhotosOptions> = (fastify, opts, done)
     }
 
     if (opts.context === 'serve') {
-        const ServeQuery = Type.Object({
-            expires: Type.String(),
-            sig: Type.String()
-        });
+        const ServeQuery = Type.Object(
+            { expires: Type.String(), sig: Type.String() },
+            { additionalProperties: false }
+        );
         type ServeQuery = Static<typeof ServeQuery>;
 
         fastify.get<{ Params: PhotoParams; Querystring: ServeQuery }>(

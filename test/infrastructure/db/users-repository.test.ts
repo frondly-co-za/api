@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
-import { MongoClient } from 'mongodb';
+import { MongoClient, MongoServerError } from 'mongodb';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import { MongoUsersRepository } from '$infrastructure/db/users-repository.js';
 
@@ -40,6 +40,48 @@ describe('findByAuth0Sub', () => {
         const created = await repo.upsert(defaultData);
         const found = await repo.findByAuth0Sub(defaultData.auth0Sub);
         expect(found).toEqual(created);
+    });
+});
+
+describe('unique index enforcement', () => {
+    beforeAll(async () => {
+        // Mirror the index created by db-index-init in production
+        await client.db('test').collection('users').createIndex({ auth0Sub: 1 }, { unique: true });
+    });
+
+    it('rejects a raw duplicate auth0Sub insert with a duplicate key error', async () => {
+        const now = new Date();
+        const col = client.db('test').collection('users');
+        await col.insertOne({
+            auth0Sub: 'auth0|dup-test',
+            email: 'a@example.com',
+            name: 'A',
+            timezone: 'UTC',
+            createdAt: now,
+            updatedAt: now
+        });
+
+        await expect(
+            col.insertOne({
+                auth0Sub: 'auth0|dup-test',
+                email: 'b@example.com',
+                name: 'B',
+                timezone: 'UTC',
+                createdAt: now,
+                updatedAt: now
+            })
+        ).rejects.toThrow(MongoServerError);
+    });
+
+    it('upsert does not create a duplicate when called twice for the same sub', async () => {
+        const first = await repo.upsert(defaultData);
+        const second = await repo.upsert({ ...defaultData, email: 'other@example.com' });
+
+        expect(second.id).toBe(first.id);
+        const count = await client.db('test').collection('users').countDocuments({
+            auth0Sub: defaultData.auth0Sub
+        });
+        expect(count).toBe(1);
     });
 });
 

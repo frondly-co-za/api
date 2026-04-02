@@ -45,6 +45,33 @@ describe('verifyPhotoSignature', () => {
         expect(verifyPhotoSignature(photoId, 'not-a-number', 'somesig', secret)).toBe(false);
     });
 
+    it('returns false for trailing non-digit chars (123abc)', () => {
+        const { sig } = parseSignedUrl(signPhotoUrl(photoId, secret));
+        expect(verifyPhotoSignature(photoId, '123abc', sig, secret)).toBe(false);
+    });
+
+    it('returns false for a leading plus sign (+123)', () => {
+        const { sig } = parseSignedUrl(signPhotoUrl(photoId, secret));
+        expect(verifyPhotoSignature(photoId, '+123', sig, secret)).toBe(false);
+    });
+
+    it('returns false for whitespace-padded numeric string', () => {
+        const { expires, sig } = parseSignedUrl(signPhotoUrl(photoId, secret));
+        expect(verifyPhotoSignature(photoId, ` ${expires} `, sig, secret)).toBe(false);
+    });
+
+    it('returns false for a decimal numeric string', () => {
+        const { sig } = parseSignedUrl(signPhotoUrl(photoId, secret));
+        const future = Math.floor(Date.now() / 1000) + 300;
+        expect(verifyPhotoSignature(photoId, `${future}.0`, sig, secret)).toBe(false);
+    });
+
+    it('returns false when expires is beyond the max future window', () => {
+        const farFuture = Math.floor(Date.now() / 1000) + 11 * 60;
+        const sig = makeHmac(photoId, farFuture);
+        expect(verifyPhotoSignature(photoId, String(farFuture), sig, secret)).toBe(false);
+    });
+
     it('returns false when the photoId has been tampered with', () => {
         const { expires, sig } = parseSignedUrl(signPhotoUrl(photoId, secret));
         const differentId = '507f1f77bcf86cd799439099';

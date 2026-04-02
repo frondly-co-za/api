@@ -154,6 +154,29 @@ describe('GET /plants/:plantId/photos', () => {
     });
 });
 
+describe('POST /plants/:plantId/photos — strict query contract', () => {
+    const { app, mockPlantsRepository, mockPhotosService } = buildPlantApp();
+    afterAll(() => app.close());
+    beforeEach(() => vi.clearAllMocks());
+
+    const boundary = 'testboundary';
+    const fakeFile = Buffer.from([0xff, 0xd8, 0xff]);
+
+    it('returns 400 when an unknown query param is supplied', async () => {
+        vi.mocked(mockPlantsRepository.findById).mockResolvedValue(plant);
+        vi.mocked(mockPhotosService.uploadToPlant).mockResolvedValue(photo);
+
+        const res = await app.inject({
+            method: 'POST',
+            url: `${PLANT_BASE}?setAsCover=true&unknownParam=evil`,
+            headers: { 'content-type': `multipart/form-data; boundary=${boundary}` },
+            payload: buildMultipartBody(boundary, 'photo.jpg', fakeFile)
+        });
+
+        expect(res.statusCode).toBe(400);
+    });
+});
+
 describe('POST /plants/:plantId/photos', () => {
     const { app, mockPhotosService, mockPlantsRepository } = buildPlantApp();
     afterAll(() => app.close());
@@ -386,6 +409,49 @@ describe('GET /photos/:photoId', () => {
         const res = await app.inject({ method: 'GET', url: '/photos/not-valid' });
 
         expect(res.statusCode).toBe(400);
+    });
+
+    it('returns 400 when an unknown query param is supplied alongside valid signature params', async () => {
+        const signedUrl = signPhotoUrl(photoId, TEST_SECRET);
+        const res = await app.inject({
+            method: 'GET',
+            url: `${signedUrl}&extra=bad`
+        });
+
+        expect(res.statusCode).toBe(400);
+    });
+
+    it('returns 403 for malformed expires with trailing chars (123abc)', async () => {
+        const res = await app.inject({
+            method: 'GET',
+            url: `/photos/${photoId}?expires=123abc&sig=${'a'.repeat(64)}`
+        });
+
+        expect(res.statusCode).toBe(403);
+        expect(mockPhotosService.getFile).not.toHaveBeenCalled();
+    });
+
+    it('returns 403 for expires with leading plus sign', async () => {
+        const res = await app.inject({
+            method: 'GET',
+            url: `/photos/${photoId}?expires=%2B999999999&sig=${'a'.repeat(64)}`
+        });
+
+        expect(res.statusCode).toBe(403);
+        expect(mockPhotosService.getFile).not.toHaveBeenCalled();
+    });
+
+    it('returns 403 when expires is beyond the max future window', async () => {
+        const { createHmac } = await import('crypto');
+        const farFuture = Math.floor(Date.now() / 1000) + 11 * 60;
+        const sig = createHmac('sha256', TEST_SECRET).update(`${photoId}:${farFuture}`).digest('hex');
+        const res = await app.inject({
+            method: 'GET',
+            url: `/photos/${photoId}?expires=${farFuture}&sig=${sig}`
+        });
+
+        expect(res.statusCode).toBe(403);
+        expect(mockPhotosService.getFile).not.toHaveBeenCalled();
     });
 });
 
