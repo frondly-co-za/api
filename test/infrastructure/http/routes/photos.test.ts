@@ -345,6 +345,16 @@ describe('GET /photos/:photoId', () => {
         expect(mockPhotosService.getFile).not.toHaveBeenCalled();
     });
 
+    it('returns 403 when expires is not a numeric string', async () => {
+        const res = await app.inject({
+            method: 'GET',
+            url: `/photos/${photoId}?expires=not-a-number&sig=${'a'.repeat(64)}`
+        });
+
+        expect(res.statusCode).toBe(403);
+        expect(mockPhotosService.getFile).not.toHaveBeenCalled();
+    });
+
     it('returns 403 when the signature is expired', async () => {
         const { createHmac } = await import('crypto');
         const expires = Math.floor(Date.now() / 1000) - 1;

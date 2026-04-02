@@ -187,4 +187,17 @@ describe('DELETE /plants/:plantId/logs/:logId', () => {
 
         expect(res.statusCode).toBe(404);
     });
+
+    it('returns 404 when the log belongs to a different plant (BOLA)', async () => {
+        mockCareLogsService.delete.mockResolvedValue(false);
+        const otherPlantId = '507f1f77bcf86cd799439099';
+
+        const res = await app.inject({
+            method: 'DELETE',
+            url: `/plants/${otherPlantId}/logs/${log.id}`
+        });
+
+        expect(res.statusCode).toBe(404);
+        expect(mockCareLogsService.delete).toHaveBeenCalledWith(testUser.id, otherPlantId, log.id);
+    });
 });
