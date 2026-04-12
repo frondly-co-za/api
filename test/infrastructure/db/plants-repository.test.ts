@@ -197,3 +197,81 @@ describe('clearCoverPhoto', () => {
         expect((await repo.findById(userId, plant.id))!.coverPhotoId).toBe(photoId);
     });
 });
+
+describe('create — client-provided id', () => {
+    it('uses the provided id instead of generating one', async () => {
+        const clientId = new ObjectId().toHexString();
+        const plant = await repo.create({ id: clientId, userId, name: 'Cactus', description: null, acquiredAt: null, notes: null });
+
+        expect(plant.id).toBe(clientId);
+        expect(await repo.findById(userId, clientId)).not.toBeNull();
+    });
+
+    it('generates an id when none is provided', async () => {
+        const plant = await repo.create({ userId, name: 'Cactus', description: null, acquiredAt: null, notes: null });
+
+        expect(plant.id).toHaveLength(24);
+    });
+
+    it('rejects a duplicate id with a MongoDB error code 11000', async () => {
+        const clientId = new ObjectId().toHexString();
+        await repo.create({ id: clientId, userId, name: 'First', description: null, acquiredAt: null, notes: null });
+
+        const err = await repo.create({ id: clientId, userId, name: 'Second', description: null, acquiredAt: null, notes: null }).catch(e => e);
+        expect((err as any).code).toBe(11000);
+    });
+});
+
+describe('update — optimistic concurrency', () => {
+    it('succeeds when updatedAt matches the server value', async () => {
+        const plant = await createPlant('Cactus');
+
+        const updated = await repo.update(userId, plant.id, { name: 'New Name', updatedAt: plant.updatedAt });
+
+        expect(updated).not.toBeNull();
+        expect(updated!.name).toBe('New Name');
+    });
+
+    it('returns null when updatedAt is stale (server was updated more recently)', async () => {
+        const plant = await createPlant('Cactus');
+
+        // Use a clearly past timestamp as the stale concurrency token — avoids millisecond
+        // collision when create and update happen in the same tick.
+        const result = await repo.update(userId, plant.id, {
+            name: 'Stale Update',
+            updatedAt: '2020-01-01T00:00:00.000Z'
+        });
+
+        expect(result).toBeNull();
+    });
+
+    it('succeeds without updatedAt (no concurrency check)', async () => {
+        const plant = await createPlant('Cactus');
+        await repo.update(userId, plant.id, { name: 'Interim Update' });
+
+        const result = await repo.update(userId, plant.id, { name: 'Unconditional Update' });
+
+        expect(result).not.toBeNull();
+        expect(result!.name).toBe('Unconditional Update');
+    });
+});
+
+describe('findAll — include parameter', () => {
+    it('returns flat plants when include is absent', async () => {
+        await createPlant('Cactus');
+
+        const plants = await repo.findAll(userId);
+
+        expect(plants[0].schedules).toBeUndefined();
+        expect(plants[0].recentLogs).toBeUndefined();
+    });
+
+    it('returns plants with schedules and recentLogs as empty arrays when include is provided but no related data exists', async () => {
+        await createPlant('Cactus');
+
+        const plants = await repo.findAll(userId, ['schedules', 'recentLogs']);
+
+        expect(plants[0].schedules).toEqual([]);
+        expect(plants[0].recentLogs).toEqual([]);
+    });
+});

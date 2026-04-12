@@ -17,7 +17,7 @@ type UpdateCareTypeBody = Static<typeof UpdateCareTypeBody>;
 
 const { name, options } = CreateCareTypeDataSchema.properties;
 const CreateCareTypeBody = Type.Object(
-    { name, options: Type.Optional(options) },
+    { id: Type.Optional(Type.String(OID)), name, options: Type.Optional(options) },
     { additionalProperties: false }
 );
 type CreateCareTypeBody = Static<typeof CreateCareTypeBody>;
@@ -48,8 +48,9 @@ const careTypesRoutes: FastifyPluginCallback = (fastify, _opts, done) => {
         '/',
         { schema: { body: CreateCareTypeBody, response: { 201: CareTypeSchema } } },
         async (request, reply) => {
-            const { name, options } = request.body;
+            const { id, name, options } = request.body;
             const careType = await fastify.careTypesRepository.create({
+                id,
                 userId: request.user!.id,
                 name,
                 options: options ?? []
@@ -71,13 +72,22 @@ const careTypesRoutes: FastifyPluginCallback = (fastify, _opts, done) => {
             }
         },
         async (request, reply) => {
-            const { name, options } = request.body;
+            const { name, options, updatedAt } = request.body;
             const careType = await fastify.careTypesRepository.update(
                 request.user!.id,
                 request.params.typeId,
-                { name, options }
+                { name, options, updatedAt }
             );
-            if (!careType) return reply.status(404).send();
+            if (!careType) {
+                if (updatedAt !== undefined) {
+                    const exists = await fastify.careTypesRepository.findById(
+                        request.user!.id,
+                        request.params.typeId
+                    );
+                    if (exists) return reply.status(409).send();
+                }
+                return reply.status(404).send();
+            }
             return careType;
         }
     );

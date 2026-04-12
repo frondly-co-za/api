@@ -6,7 +6,7 @@ import {
     CareSchedulesRepository
 } from '$domain/care-schedule.js';
 
-interface CareScheduleDocument {
+export interface CareScheduleDocument {
     _id: ObjectId;
     userId: ObjectId;
     plantId: ObjectId;
@@ -76,7 +76,7 @@ export class MongoCareSchedulesRepository implements CareSchedulesRepository {
 
     async create(data: CreateCareScheduleData): Promise<CareSchedule> {
         const now = new Date();
-        const _id = new ObjectId();
+        const _id = data.id ? new ObjectId(data.id) : new ObjectId();
         const doc: CareScheduleDocument = {
             _id,
             userId: new ObjectId(data.userId),
@@ -112,8 +112,14 @@ export class MongoCareSchedulesRepository implements CareSchedulesRepository {
         if (data.isActive !== undefined) $set.isActive = data.isActive;
         if (data.nextDue !== undefined) $set.nextDue = new Date(data.nextDue);
 
+        const filter: Parameters<typeof this.collection.findOneAndUpdate>[0] = {
+            _id: new ObjectId(id),
+            userId: new ObjectId(userId),
+            plantId: new ObjectId(plantId),
+            ...(data.updatedAt ? { updatedAt: { $lte: new Date(data.updatedAt) } } : {})
+        };
         const result = await this.collection.findOneAndUpdate(
-            { _id: new ObjectId(id), userId: new ObjectId(userId), plantId: new ObjectId(plantId) },
+            filter,
             { $set },
             { returnDocument: 'after' }
         );

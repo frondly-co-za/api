@@ -7,10 +7,12 @@ import plantsRoutes from './routes/plants.js';
 import careTypesRoutes from './routes/care-types.js';
 import schedulesRoutes from './routes/schedules.js';
 import photosRoutes from './routes/photos.js';
+import healthRoutes from './routes/health.js';
 import dbConnector from './plugins/db-connector.js';
 import dbIndexInit from './plugins/db-index-init.js';
 import services from './plugins/services.js';
 import auth from './plugins/auth.js';
+import errorHandler from './plugins/error-handler.js';
 
 const fastify = Fastify({
     trustProxy: process.env.TRUSTED_PROXY_IP ?? false,
@@ -69,15 +71,10 @@ if (process.env.NODE_ENV !== 'production') {
     fastify.register(swaggerUi, { routePrefix: '/swagger' });
 }
 
+fastify.register(errorHandler);
+
 // Open routes
-fastify.get('/health', async (_request, reply) => {
-    try {
-        await fastify.mongo.db?.admin().ping();
-        return reply.send({ status: 'ok' });
-    } catch {
-        return reply.status(503).send({ status: 'unavailable' });
-    }
-});
+fastify.register(healthRoutes, { prefix: '/health' });
 
 fastify.register(photosRoutes, { prefix: '/photos', context: 'serve' });
 

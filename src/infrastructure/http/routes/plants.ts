@@ -1,6 +1,8 @@
 import { Static, Type } from 'typebox';
 import { FastifyPluginCallback } from 'fastify';
 import { Plant, PlantSchema, CreatePlantDataSchema, UpdatePlantDataSchema } from '$domain/plant.js';
+import { CareScheduleSchema } from '$domain/care-schedule.js';
+import { CareLogSchema } from '$domain/care-log.js';
 import { OID } from './oid.js';
 import { signPhotoUrl } from '$infrastructure/http/signing/photo-url.js';
 import careSchedulesRoutes from './care-schedules.js';
@@ -16,6 +18,7 @@ type UpdatePlantBody = Static<typeof UpdatePlantBody>;
 const { name, description, acquiredAt, notes } = CreatePlantDataSchema.properties;
 const CreatePlantBody = Type.Object(
     {
+        id: Type.Optional(Type.String(OID)),
         name,
         description: Type.Optional(description),
         acquiredAt: Type.Optional(acquiredAt),
@@ -30,6 +33,23 @@ const PlantResponse = Type.Object({
     coverPhotoUrl: Type.Union([Type.String(), Type.Null()])
 });
 type PlantResponse = Static<typeof PlantResponse>;
+
+const VALID_INCLUDES = ['schedules', 'recentLogs'] as const;
+type IncludeKey = (typeof VALID_INCLUDES)[number];
+
+const GetPlantsQuery = Type.Object(
+    { include: Type.Optional(Type.String()) },
+    { additionalProperties: false }
+);
+type GetPlantsQuery = Static<typeof GetPlantsQuery>;
+
+const EnrichedPlantResponse = Type.Object({
+    ...PlantSchema.properties,
+    schedules: Type.Optional(Type.Array(CareScheduleSchema)),
+    recentLogs: Type.Optional(Type.Array(CareLogSchema)),
+    coverPhotoUrl: Type.Union([Type.String(), Type.Null()])
+});
+type EnrichedPlantResponse = Static<typeof EnrichedPlantResponse>;
 
 function withCoverUrl(plant: Plant): PlantResponse {
     const secret = process.env.PHOTO_SIGNING_SECRET!;
@@ -46,11 +66,34 @@ const PlantParams = Type.Object({ plantId: Type.String(OID) });
 type PlantParams = Static<typeof PlantParams>;
 
 const plantsRoutes: FastifyPluginCallback = (fastify, _opts, done) => {
-    fastify.get(
+    fastify.get<{ Querystring: GetPlantsQuery }>(
         '/',
-        { schema: { response: { 200: Type.Array(PlantResponse) } } },
-        async (request) => {
-            const plants = await fastify.plantsRepository.findAll(request.user!.id);
+        {
+            schema: {
+                querystring: GetPlantsQuery,
+                response: { 200: Type.Array(EnrichedPlantResponse) }
+            }
+        },
+        async (request, reply) => {
+            const { include: includeParam } = request.query;
+            let include: IncludeKey[] | undefined;
+
+            if (includeParam !== undefined) {
+                const parts = includeParam.split(',').map((s) => s.trim());
+                const invalid = parts.filter(
+                    (p) => !(VALID_INCLUDES as readonly string[]).includes(p)
+                );
+                if (invalid.length > 0) {
+                    return reply.status(400).send({
+                        statusCode: 400,
+                        error: 'Bad Request',
+                        message: `Unknown include value(s): ${invalid.join(', ')}`
+                    });
+                }
+                include = parts as IncludeKey[];
+            }
+
+            const plants = await fastify.plantsRepository.findAll(request.user!.id, include);
             return plants.map(withCoverUrl);
         }
     );
@@ -72,8 +115,9 @@ const plantsRoutes: FastifyPluginCallback = (fastify, _opts, done) => {
         '/',
         { schema: { body: CreatePlantBody, response: { 201: PlantResponse } } },
         async (request, reply) => {
-            const { name, description, acquiredAt, notes } = request.body;
+            const { id, name, description, acquiredAt, notes } = request.body;
             const plant = await fastify.plantsRepository.create({
+                id,
                 userId: request.user!.id,
                 name,
                 description: description ?? null,
@@ -93,13 +137,22 @@ const plantsRoutes: FastifyPluginCallback = (fastify, _opts, done) => {
             schema: { params: PlantParams, body: UpdatePlantBody, response: { 200: PlantResponse } }
         },
         async (request, reply) => {
-            const { name, description, acquiredAt, notes } = request.body;
+            const { name, description, acquiredAt, notes, updatedAt } = request.body;
             const plant = await fastify.plantsRepository.update(
                 request.user!.id,
                 request.params.plantId,
-                { name, description, acquiredAt, notes }
+                { name, description, acquiredAt, notes, updatedAt }
             );
-            if (!plant) return reply.status(404).send();
+            if (!plant) {
+                if (updatedAt !== undefined) {
+                    const exists = await fastify.plantsRepository.findById(
+                        request.user!.id,
+                        request.params.plantId
+                    );
+                    if (exists) return reply.status(409).send();
+                }
+                return reply.status(404).send();
+            }
             return withCoverUrl(plant);
         }
     );

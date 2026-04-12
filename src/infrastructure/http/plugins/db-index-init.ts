@@ -13,6 +13,7 @@ async function dbIndexInit(fastify: FastifyInstance) {
         db.collection('care-schedules').createIndex({ userId: 1, isActive: 1, nextDue: 1 }),
 
         db.collection('care-logs').createIndex({ userId: 1, plantId: 1 }),
+        db.collection('care-logs').createIndex({ plantId: 1, performedAt: -1 }),
 
         db.collection('care-types').createIndex({ userId: 1 }),
 

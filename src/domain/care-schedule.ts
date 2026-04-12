@@ -28,6 +28,7 @@ export const CareScheduleSchema = Type.Object({
 export type CareSchedule = Static<typeof CareScheduleSchema>;
 
 export const CreateCareScheduleDataSchema = Type.Object({
+    id: Type.Optional(Type.String()),
     userId: Type.String(),
     plantId: Type.String(),
     careTypeId: Type.String(),
@@ -49,7 +50,8 @@ export const UpdateCareScheduleDataSchema = Type.Object({
     dayOfMonth: Type.Optional(Type.Array(Type.Integer({ minimum: 1, maximum: 31 }))),
     months: Type.Optional(Type.Array(Type.Integer({ minimum: 1, maximum: 12 }))),
     isActive: Type.Optional(Type.Boolean()),
-    nextDue: Type.Optional(Type.String({ format: 'date-time' })) // computed by service; not exposed in route body
+    nextDue: Type.Optional(Type.String({ format: 'date-time' })), // computed by service; not exposed in route body
+    updatedAt: Type.Optional(Type.String({ format: 'date-time' }))
 });
 export type UpdateCareScheduleData = Static<typeof UpdateCareScheduleDataSchema>;
 

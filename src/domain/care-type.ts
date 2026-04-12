@@ -12,6 +12,7 @@ export const CareTypeSchema = Type.Object({
 export type CareType = Static<typeof CareTypeSchema>;
 
 export const CreateCareTypeDataSchema = Type.Object({
+    id: Type.Optional(Type.String()),
     userId: Type.String(),
     name: Type.String({ maxLength: 256 }),
     options: Type.Array(Type.String({ maxLength: 256 }))
@@ -20,7 +21,8 @@ export type CreateCareTypeData = Static<typeof CreateCareTypeDataSchema>;
 
 export const UpdateCareTypeDataSchema = Type.Object({
     name: Type.Optional(Type.String({ maxLength: 256 })),
-    options: Type.Optional(Type.Array(Type.String({ maxLength: 256 })))
+    options: Type.Optional(Type.Array(Type.String({ maxLength: 256 }))),
+    updatedAt: Type.Optional(Type.String({ format: 'date-time' }))
 });
 export type UpdateCareTypeData = Static<typeof UpdateCareTypeDataSchema>;
 

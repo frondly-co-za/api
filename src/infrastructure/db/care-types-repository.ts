@@ -50,7 +50,7 @@ export class MongoCareTypesRepository implements CareTypesRepository {
 
     async create(data: CreateCareTypeData): Promise<CareType> {
         const now = new Date();
-        const _id = new ObjectId();
+        const _id = data.id ? new ObjectId(data.id) : new ObjectId();
         const doc: CareTypeDocument = {
             _id,
             userId: new ObjectId(data.userId),
@@ -67,8 +67,13 @@ export class MongoCareTypesRepository implements CareTypesRepository {
         const $set: Partial<CareTypeDocument> & { updatedAt: Date } = { updatedAt: new Date() };
         if (data.name !== undefined) $set.name = data.name;
         if (data.options !== undefined) $set.options = data.options;
+        const filter: Parameters<typeof this.collection.findOneAndUpdate>[0] = {
+            _id: new ObjectId(id),
+            userId: new ObjectId(userId),
+            ...(data.updatedAt ? { updatedAt: { $lte: new Date(data.updatedAt) } } : {})
+        };
         const result = await this.collection.findOneAndUpdate(
-            { _id: new ObjectId(id), userId: new ObjectId(userId) },
+            filter,
             { $set },
             { returnDocument: 'after' }
         );

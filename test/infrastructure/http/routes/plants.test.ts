@@ -1,9 +1,12 @@
 import { describe, it, expect, vi, afterAll, beforeAll, beforeEach } from 'vitest';
+import type { CareSchedule } from '$domain/care-schedule.js';
+import type { CareLog } from '$domain/care-log.js';
 
 beforeAll(() => { process.env.PHOTO_SIGNING_SECRET = 'test-signing-secret'; });
 import Fastify from 'fastify';
 import multipart from '@fastify/multipart';
 import plantsRoute from '$infrastructure/http/routes/plants.js';
+import errorHandler from '$infrastructure/http/plugins/error-handler.js';
 import type { Plant, PlantsRepository } from '$domain/plant.js';
 import type { PhotosRepository } from '$domain/photo.js';
 import type { PhotosService } from '$application/photos-service.js';
@@ -24,7 +27,7 @@ const testUser: User = {
  * No DB or real plugins are loaded — we decorate directly before registering routes.
  * request.user is set via a preHandler, mirroring what the real auth plugin does.
  */
-function buildApp() {
+function buildApp({ withErrorHandler = false } = {}) {
     const app = Fastify({ logger: false, ajv: { customOptions: { removeAdditional: false } } });
 
     const mockPlantsRepository: PlantsRepository = {
@@ -51,6 +54,7 @@ function buildApp() {
         getFile: vi.fn(),
     } as unknown as PhotosService;
 
+    if (withErrorHandler) app.register(errorHandler);
     app.register(multipart);
     app.decorateRequest('user', null);
     app.addHook('preHandler', async (request) => {
@@ -88,7 +92,7 @@ describe('GET /plants', () => {
 
         expect(res.statusCode).toBe(200);
         expect(res.json()).toMatchObject([plant]);
-        expect(mockPlantsRepository.findAll).toHaveBeenCalledExactlyOnceWith(testUser.id);
+        expect(mockPlantsRepository.findAll).toHaveBeenCalledExactlyOnceWith(testUser.id, undefined);
     });
 
     it('returns coverPhotoUrl as null when coverPhotoId is null', async () => {
@@ -343,5 +347,189 @@ describe('POST /plants', () => {
 
         expect(res.statusCode).toBe(400);
         expect(mockPlantsRepository.create).not.toHaveBeenCalled();
+    });
+});
+
+describe('POST /plants — client-provided id', () => {
+    const { app, mockPlantsRepository } = buildApp({ withErrorHandler: true });
+    afterAll(() => app.close());
+    beforeEach(() => vi.clearAllMocks());
+
+    it('passes optional id to the repository when provided', async () => {
+        vi.mocked(mockPlantsRepository.create).mockResolvedValue(plant);
+
+        const res = await app.inject({
+            method: 'POST',
+            url: '/plants',
+            payload: { id: plant.id, name: 'Cactus' },
+        });
+
+        expect(res.statusCode).toBe(201);
+        expect(mockPlantsRepository.create).toHaveBeenCalledWith(
+            expect.objectContaining({ id: plant.id })
+        );
+    });
+
+    it('returns 400 when id is not a valid ObjectId', async () => {
+        const res = await app.inject({
+            method: 'POST',
+            url: '/plants',
+            payload: { id: 'not-a-valid-oid', name: 'Cactus' },
+        });
+
+        expect(res.statusCode).toBe(400);
+        expect(mockPlantsRepository.create).not.toHaveBeenCalled();
+    });
+
+    it('returns 409 when the repository throws a duplicate key error', async () => {
+        const duplicateKeyError = Object.assign(new Error('duplicate key'), { code: 11000 });
+        vi.mocked(mockPlantsRepository.create).mockRejectedValue(duplicateKeyError);
+
+        const res = await app.inject({
+            method: 'POST',
+            url: '/plants',
+            payload: { id: plant.id, name: 'Cactus' },
+        });
+
+        expect(res.statusCode).toBe(409);
+    });
+});
+
+describe('PATCH /plants/:plantId — optimistic concurrency', () => {
+    const { app, mockPlantsRepository } = buildApp();
+    afterAll(() => app.close());
+    beforeEach(() => vi.clearAllMocks());
+
+    it('returns 409 when update returns null and plant still exists (conflict)', async () => {
+        vi.mocked(mockPlantsRepository.update).mockResolvedValue(null);
+        vi.mocked(mockPlantsRepository.findById).mockResolvedValue(plant);
+
+        const res = await app.inject({
+            method: 'PATCH',
+            url: `/plants/${plant.id}`,
+            payload: { name: 'Updated', updatedAt: '2025-01-01T00:00:00.000Z' },
+        });
+
+        expect(res.statusCode).toBe(409);
+        expect(mockPlantsRepository.findById).toHaveBeenCalledWith(testUser.id, plant.id);
+    });
+
+    it('returns 404 when update returns null and plant does not exist', async () => {
+        vi.mocked(mockPlantsRepository.update).mockResolvedValue(null);
+        vi.mocked(mockPlantsRepository.findById).mockResolvedValue(null);
+
+        const res = await app.inject({
+            method: 'PATCH',
+            url: `/plants/${plant.id}`,
+            payload: { name: 'Updated', updatedAt: '2025-01-01T00:00:00.000Z' },
+        });
+
+        expect(res.statusCode).toBe(404);
+    });
+
+    it('returns 404 without calling findById when updatedAt is not provided', async () => {
+        vi.mocked(mockPlantsRepository.update).mockResolvedValue(null);
+
+        const res = await app.inject({
+            method: 'PATCH',
+            url: `/plants/${plant.id}`,
+            payload: { name: 'Updated' },
+        });
+
+        expect(res.statusCode).toBe(404);
+        expect(mockPlantsRepository.findById).not.toHaveBeenCalled();
+    });
+});
+
+describe('GET /plants — ?include= query', () => {
+    const { app, mockPlantsRepository } = buildApp();
+    afterAll(() => app.close());
+    beforeEach(() => vi.clearAllMocks());
+
+    const schedule: CareSchedule = {
+        id: '507f1f77bcf86cd799439020',
+        userId: testUser.id,
+        plantId: plant.id,
+        careTypeId: '507f1f77bcf86cd799439030',
+        selectedOption: null,
+        notes: null,
+        dayOfWeek: [],
+        dayOfMonth: [],
+        months: [],
+        nextDue: '2026-02-01T00:00:00.000Z',
+        isActive: true,
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-01-01T00:00:00.000Z',
+    };
+
+    const log: CareLog = {
+        id: '507f1f77bcf86cd799439040',
+        userId: testUser.id,
+        plantId: plant.id,
+        scheduleId: null,
+        careTypeId: '507f1f77bcf86cd799439030',
+        selectedOption: null,
+        notes: null,
+        performedAt: '2026-01-15T00:00:00.000Z',
+        createdAt: '2026-01-15T00:00:00.000Z',
+    };
+
+    it('returns 400 for unknown include values', async () => {
+        const res = await app.inject({ method: 'GET', url: '/plants?include=unknown' });
+
+        expect(res.statusCode).toBe(400);
+        expect(mockPlantsRepository.findAll).not.toHaveBeenCalled();
+    });
+
+    it('returns 400 when one of multiple include values is unknown', async () => {
+        const res = await app.inject({
+            method: 'GET',
+            url: '/plants?include=schedules,invalid',
+        });
+
+        expect(res.statusCode).toBe(400);
+    });
+
+    it('calls findAll with parsed include array', async () => {
+        vi.mocked(mockPlantsRepository.findAll).mockResolvedValue([plant]);
+
+        const res = await app.inject({
+            method: 'GET',
+            url: '/plants?include=schedules,recentLogs',
+        });
+
+        expect(res.statusCode).toBe(200);
+        expect(mockPlantsRepository.findAll).toHaveBeenCalledExactlyOnceWith(testUser.id, [
+            'schedules',
+            'recentLogs',
+        ]);
+    });
+
+    it('returns embedded schedules and recentLogs when include is present', async () => {
+        const enrichedPlant = { ...plant, schedules: [schedule], recentLogs: [log] };
+        vi.mocked(mockPlantsRepository.findAll).mockResolvedValue([enrichedPlant]);
+
+        const res = await app.inject({
+            method: 'GET',
+            url: '/plants?include=schedules,recentLogs',
+        });
+
+        expect(res.statusCode).toBe(200);
+        const [result] = res.json();
+        expect(result.schedules).toHaveLength(1);
+        expect(result.schedules[0].id).toBe(schedule.id);
+        expect(result.recentLogs).toHaveLength(1);
+        expect(result.recentLogs[0].id).toBe(log.id);
+    });
+
+    it('omits schedules and recentLogs from response when include is absent', async () => {
+        vi.mocked(mockPlantsRepository.findAll).mockResolvedValue([plant]);
+
+        const res = await app.inject({ method: 'GET', url: '/plants' });
+
+        expect(res.statusCode).toBe(200);
+        const [result] = res.json();
+        expect(result.schedules).toBeUndefined();
+        expect(result.recentLogs).toBeUndefined();
     });
 });

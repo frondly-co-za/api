@@ -1,7 +1,7 @@
 import { Db, ObjectId, WithId } from 'mongodb';
 import { CareLog, CreateCareLogData, CareLogsRepository } from '$domain/care-log.js';
 
-interface CareLogDocument {
+export interface CareLogDocument {
     _id: ObjectId;
     userId: ObjectId;
     plantId: ObjectId;
@@ -52,7 +52,7 @@ export class MongoCareLogsRepository implements CareLogsRepository {
 
     async create(data: CreateCareLogData): Promise<CareLog> {
         const now = new Date();
-        const _id = new ObjectId();
+        const _id = data.id ? new ObjectId(data.id) : new ObjectId();
         const doc: CareLogDocument = {
             _id,
             userId: new ObjectId(data.userId),

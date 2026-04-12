@@ -8,7 +8,8 @@ if (missing.length > 0) {
 import server from '$infrastructure/http/server.js';
 
 try {
-    await server.listen({ port: 3000, host: '0.0.0.0' });
+    const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 4500;
+    await server.listen({ port, host: '0.0.0.0' });
 } catch (err) {
     server.log.error(err);
     process.exit(1);

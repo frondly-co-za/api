@@ -7,6 +7,7 @@ import { OID } from './oid.js';
 const { selectedOption, notes, performedAt } = CreateCareLogDataSchema.properties;
 const LogBody = Type.Object(
     {
+        id: Type.Optional(Type.String(OID)),
         careTypeId: Type.String(OID),
         scheduleId: Type.Optional(Type.String(OID)),
         selectedOption: Type.Optional(selectedOption),
@@ -51,9 +52,10 @@ const careLogsRoutes: FastifyPluginCallback = (fastify, _opts, done) => {
         { schema: { params: LogParams, body: LogBody, response: { 201: CareLogSchema } } },
         async (request, reply) => {
             const { plantId } = request.params;
-            const { careTypeId, scheduleId, selectedOption, notes, performedAt } = request.body;
+            const { id, careTypeId, scheduleId, selectedOption, notes, performedAt } = request.body;
             const log = await fastify.careLogsService.create(
                 {
+                    id,
                     userId: request.user!.id,
                     plantId,
                     scheduleId: scheduleId ?? null,

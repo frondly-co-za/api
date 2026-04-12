@@ -15,6 +15,7 @@ export const CareLogSchema = Type.Object({
 export type CareLog = Static<typeof CareLogSchema>;
 
 export const CreateCareLogDataSchema = Type.Object({
+    id: Type.Optional(Type.String()),
     userId: Type.String(),
     plantId: Type.String(),
     scheduleId: Type.Union([Type.String(), Type.Null()]),

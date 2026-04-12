@@ -30,6 +30,7 @@ const { selectedOption, notes, dayOfWeek, dayOfMonth, months } =
     CreateCareScheduleDataSchema.properties;
 const CreateScheduleBody = Type.Object(
     {
+        id: Type.Optional(Type.String(OID)),
         careTypeId: Type.String(OID),
         selectedOption: Type.Optional(selectedOption),
         notes: Type.Optional(notes),
@@ -79,9 +80,10 @@ const careSchedulesRoutes: FastifyPluginCallback = (fastify, _opts, done) => {
         },
         async (request, reply) => {
             const { plantId } = request.params;
-            const { careTypeId, selectedOption, notes, dayOfWeek, dayOfMonth, months } =
+            const { id, careTypeId, selectedOption, notes, dayOfWeek, dayOfMonth, months } =
                 request.body;
             const schedule = await fastify.careSchedulesService.create({
+                id,
                 userId: request.user!.id,
                 plantId,
                 careTypeId,
@@ -108,14 +110,25 @@ const careSchedulesRoutes: FastifyPluginCallback = (fastify, _opts, done) => {
             }
         },
         async (request, reply) => {
+            const { plantId, scheduleId } = request.params;
             const schedule = await fastify.careSchedulesService.update(
                 request.user!.id,
-                request.params.plantId,
-                request.params.scheduleId,
+                plantId,
+                scheduleId,
                 request.body,
                 request.log
             );
-            if (!schedule) return reply.status(404).send();
+            if (!schedule) {
+                if (request.body.updatedAt !== undefined) {
+                    const exists = await fastify.careSchedulesService.getById(
+                        request.user!.id,
+                        plantId,
+                        scheduleId
+                    );
+                    if (exists) return reply.status(409).send();
+                }
+                return reply.status(404).send();
+            }
             return schedule;
         }
     );
